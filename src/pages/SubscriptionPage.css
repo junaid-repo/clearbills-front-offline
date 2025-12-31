@@ -1,0 +1,468 @@
+/* --- Base Page Styles --- */
+.subscription-page-container {
+    width: 100%;
+    max-width: 1000px;
+    margin: 40px auto;
+    padding: 20px;
+    font-family: var(--font-family);
+    color: var(--text-color);
+}
+
+.subscription-header {
+    text-align: center;
+    margin-bottom: 40px;
+}
+
+.subscription-header svg {
+    color: #f59e0b; /* Gold */
+}
+
+.subscription-header h1 {
+    font-size: 2.5rem;
+    font-weight: 700;
+    margin: 10px 0;
+}
+
+.subscription-header p {
+    font-size: 1.2rem;
+    color: var(--text-color);
+}
+
+.subscription-content {
+    display: grid;
+    grid-template-columns: 1fr 2fr;
+    gap: 30px;
+    color: var(--text-color);
+}
+
+/* --- Feature List (Problem 1 Fix) --- */
+.features-list-card {
+    background: var(--glass-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    padding: 25px;
+    box-shadow: 0 4px 12px var(--shadow-color);
+}
+
+.features-list-card h2 {
+    font-size: 1.4rem;
+    font-weight: 600;
+    border-bottom: 1px solid var(--border-color);
+    padding-bottom: 10px;
+    margin-top: 0;
+}
+
+.features-list-card ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+
+}
+
+.feature-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-size: 1rem;
+    margin-bottom: 15px;
+    color: var(--text-color);
+}
+
+/* --- THIS IS THE FIX for the icons --- */
+.feature-item i {
+    font-size: 1.2rem;
+    flex-shrink: 0;
+    width: 20px; /* Give it a fixed width for alignment */
+    text-align: center;
+    color: var(--primary-color); /* Make sure the icon has the theme color */
+}
+
+.feature-item span {
+    color: #000 !important;      /* <-- Force text to be black */
+    font-size: 1rem;           /* Ensure font size is not 0 */
+    opacity: 1;                /* Ensure it is not transparent */
+    visibility: visible;       /* Ensure it is not hidden */
+    font-weight: 500;          /* Make it a little bolder */
+}
+/* --- END FIX --- */
+
+/* --- Plan Cards (Problem 2 Fix) --- */
+.plans-container {
+    display: flex;
+    gap: 20px;
+}
+
+.plan-card {
+    flex: 1;
+    background: var(--glass-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    padding: 25px;
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    transition: all 0.3s ease;
+    position: relative;
+}
+
+.plan-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 8px 20px var(--shadow-color);
+}
+
+.plan-card.popular {
+    border: 2px solid var(--primary-color);
+}
+
+.plan-badge {
+    position: absolute;
+    top: -15px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: var(--primary-color);
+    color: white;
+    padding: 5px 15px;
+    border-radius: 20px;
+    font-size: 0.9rem;
+    font-weight: 600;
+}
+
+.plan-header h3 {
+    font-size: 1.5rem;
+    font-weight: 600;
+    margin: 0 0 10px 0;
+}
+
+.plan-price {
+    font-size: 2.2rem;
+    font-weight: 700;
+    margin: 0;
+}
+
+.plan-price span {
+    font-size: 1rem;
+    font-weight: 400;
+    color: var(--text-color);
+}
+
+.plan-billed-info {
+    font-size: 0.9rem;
+    color: var(--text-color);
+    margin: 10px 0 20px 0;
+}
+
+/* This is the button style you were missing */
+.btn-subscribe {
+    width: 100%;
+    padding: 12px;
+    font-size: 1.1rem;
+    font-weight: 600;
+    border-radius: 8px;
+    border: none;
+    cursor: pointer;
+    background: var(--primary-color);
+    color: white;
+    transition: all 0.2s ease;
+}
+
+.btn-subscribe:disabled {
+    opacity: 0.7;
+    cursor: wait;
+}
+
+.plan-card:not(.popular) .btn-subscribe {
+    background: var(--glass-bg);
+    color: var(--primary-color);
+    border: 1px solid var(--primary-color);
+}
+
+.plan-savings {
+    margin-top: auto;
+    padding-top: 20px;
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: var(--primary-color);
+}
+
+/* Responsive */
+@media (max-width: 900px) {
+    .subscription-content {
+        grid-template-columns: 1fr;
+    }
+    .plans-container {
+        flex-direction: column;
+    }
+}
+
+/* --- 3. NEW "HURRAH" MODAL STYLES (Problem 3 Fix) --- */
+
+.success-modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.6); /* Translucent background */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 2000;
+    backdrop-filter: blur(5px);
+}
+
+.success-modal-content {
+    background: var(--glass-bg);
+    padding: 30px 40px;
+    border-radius: 12px;
+    text-align: center;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+    border: 1px solid var(--border-color);
+    color: var(--text-color);
+}
+
+.success-modal-content h2 {
+    font-size: 1.8rem;
+    font-weight: 600;
+    color: var(--primary-color);
+    margin: 20px 0 10px 0;
+}
+
+.success-modal-content p {
+    font-size: 1.1rem;
+    color: var(--text-color);
+    margin: 0;
+}
+
+/* --- Checkmark Animation --- */
+.checkmark {
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    display: block;
+    stroke-width: 3;
+    stroke: #4BB543; /* Green */
+    stroke-miterlimit: 10;
+    margin: 0 auto;
+    box-shadow: inset 0px 0px 0px #4BB543;
+    animation: fill .4s ease-in-out .4s forwards, scale .3s ease-in-out .9s both;
+}
+
+.checkmark-circle {
+    stroke-dasharray: 166;
+    stroke-dashoffset: 166;
+    stroke-width: 3;
+    stroke-miterlimit: 10;
+    stroke: #4BB543;
+    fill: none;
+    animation: stroke .6s cubic-bezier(0.65, 0, 0.45, 1) forwards;
+}
+
+.checkmark-check {
+    transform-origin: 50% 50%;
+    stroke-dasharray: 48;
+    stroke-dashoffset: 48;
+    animation: stroke .3s cubic-bezier(0.65, 0, 0.45, 1) .8s forwards;
+}
+
+@keyframes stroke {
+    100% {
+        stroke-dashoffset: 0;
+    }
+}
+@keyframes scale {
+    0%, 100% {
+        transform: none;
+    }
+    50% {
+        transform: scale3d(1.1, 1.1, 1);
+    }
+}
+@keyframes fill {
+    100% {
+        box-shadow: inset 0px 0px 0px 40px #4BB543;
+    }
+}/* --- Add this to SubscriptionPage.css --- */
+
+/* --- NEW, SIMPLE FEATURE LIST --- */
+.simple-feature-list {
+    margin-top: 20px; /* Add some space below the <h2> */
+    color: var(--text-color); /* Ensures all child text uses this color */
+}
+
+.simple-feature-list p {
+    display: flex; /* Aligns icon and text */
+    align-items: center; /* Vertically centers icon and text */
+    gap: 10px; /* Space between icon and text */
+    font-size: 1rem; /* 16px */
+    font-weight: 500;
+    margin-bottom: 12px; /* Space between each feature */
+
+    /* Explicitly set color again to be safe */
+    color: var(--text-color);
+}
+
+.simple-feature-list p i {
+    color: var(--primary-color); /* Your main theme color */
+    font-size: 1.2rem; /* Make icon slightly bigger */
+    width: 20px;
+    text-align: center;
+}/* ... (keep all your existing styles for .subscription-page-container, .features-list-card, .plan-card, etc.) ... */
+
+
+/* --- STYLES FOR SUCCESS MODAL --- */
+
+.success-modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.6);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 2000;
+    backdrop-filter: blur(5px);
+    animation: fadeIn 0.3s ease;
+}
+
+.success-modal-content {
+    background: var(--glass-bg);
+    padding: 30px 40px;
+    border-radius: 12px;
+    text-align: center;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+    border: 1px solid var(--border-color);
+    color: var(--text-color);
+    animation: scaleIn 0.3s ease;
+    position: relative; /* Needed for the absolute timer */
+    overflow: hidden;
+}
+
+/* --- (Keep all .checkmark, @keyframes, etc. styles) --- */
+.checkmark {
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    display: block;
+    stroke-width: 3;
+    stroke: #4BB543; /* Green */
+    stroke-miterlimit: 10;
+    margin: 0 auto;
+    box-shadow: inset 0px 0px 0px #4BB543;
+    animation: fill .4s ease-in-out .4s forwards, scale .3s ease-in-out .9s both;
+}
+.checkmark-circle {
+    stroke-dasharray: 166;
+    stroke-dashoffset: 166;
+    stroke-width: 3;
+    stroke-miterlimit: 10;
+    stroke: #4BB543;
+    fill: none;
+    animation: stroke .6s cubic-bezier(0.65, 0, 0.45, 1) forwards;
+}
+.checkmark-check {
+    transform-origin: 50% 50%;
+    stroke-dasharray: 48;
+    stroke-dashoffset: 48;
+    animation: stroke .3s cubic-bezier(0.65, 0, 0.45, 1) .8s forwards;
+}
+
+
+/* --- NEW: Countdown Timer/Graph (Req 3) --- */
+.countdown-timer {
+    position: absolute;
+    top: 15px;
+    right: 20px;
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.countdown-svg {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    transform: rotate(-90deg); /* Start from the top */
+}
+.countdown-circle-bg {
+    fill: none;
+    stroke: var(--border-color);
+    stroke-width: 4;
+}
+.countdown-circle-progress {
+    fill: none;
+    stroke: var(--primary-color);
+    stroke-width: 4;
+    stroke-linecap: round;
+    transition: stroke-dasharray 0.1s linear; /* Smooth animation */
+}
+.countdown-text {
+    font-size: 1.2rem;
+    font-weight: 600;
+    color: var(--primary-color);
+}
+/* --- END Countdown --- */
+
+
+/* --- NEW: Styled Detail Text (Req 2) --- */
+.success-modal-content h2 {
+    font-size: 1.8rem;
+    font-weight: 600;
+    color: #4BB543; /* Green */
+    margin: 20px 0 10px 0;
+}
+
+.success-modal-detail-email,
+.success-modal-detail-profile {
+    font-size: 2.1rem; /* Big */
+    font-weight: 600;  /* Bold */
+    margin: 10px 0 0 0;
+    text-align: left;
+    padding: 0 25px; /* Indent a bit */
+}
+.success-modal-detail-email {
+    color: #007bff; /* Blue */
+}
+.success-modal-detail-profile {
+    color: #28a745; /* Green */
+}
+
+/* --- This is the "Redirecting..." text --- */
+.success-modal-content p {
+    font-size: 1.1rem;
+    color: var(--text-color);
+    margin: 20px 0 0 0;
+}
+/* --- END New Styles --- */
+
+
+/* --- REMOVE OLD Progress Bar Styles --- */
+/*
+.success-progress-bar-container { ... }
+.success-progress-bar { ... }
+*/
+
+/* --- (Keep all other keyframes: @stroke, @scale, @fill, @fadeIn, @scaleIn) --- */
+@keyframes stroke {
+    100% { stroke-dashoffset: 0; }
+}
+@keyframes scale {
+    0%, 100% { transform: none; }
+    50% { transform: scale3d(1.1, 1.1, 1); }
+}
+@keyframes fill {
+    100% { box-shadow: inset 0px 0px 0px 40px #4BB543; }
+}
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+@keyframes scaleIn {
+    from { transform: scale(0.9); opacity: 0; }
+    to { transform: scale(1); opacity: 1; }
+}
+/* --- END NEW LIST --- */

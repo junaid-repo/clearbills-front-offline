@@ -1,0 +1,281 @@
+/* src/components/Sidebar.css */
+.sidebar {
+    width: var(--sidebar-width);
+    position: fixed;
+    top: 0;
+    left: 0;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+
+    border-right: 0px solid var(--border-color);
+    padding: 1rem 1rem 0.8rem 1rem; /* reduce top padding to move nav up */
+    transition: width 0.32s cubic-bezier(.2,.8,.2,1), padding 0.25s ease, transform 0.3s ease;
+    z-index: 100;
+}
+
+/* Collapsed sidebar - narrow */
+.sidebar.collapsed {
+    width: 92px; /* slightly larger collapsed width */
+    padding: 1.25rem 0.5rem;
+}
+
+.sidebar-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 0 6px;
+    padding-top: 5rem;
+    margin-bottom: 4px; /* tighten spacing so nav sits higher */
+    height: 44px; /* keep header compact and single-line */
+    font-weight: 900;
+}
+
+.logo {
+    color: var(--primary-color);
+    font-weight: 700;
+    font-size: 1.4rem;
+    padding: 0 0.25rem;
+    margin-bottom: 0; /* remove large bottom margin */
+    transition: font-size 0.2s ease, padding 0.2s ease;
+}
+
+/* Logo shrink in collapsed state */
+.sidebar.collapsed .logo {
+    font-size: 1.1rem;
+    padding: 0.25rem 0;
+    margin-bottom: 24px;
+}
+
+.sidebar-nav {
+    display: flex;
+    flex-direction: column;
+    padding-top: 12.25rem;
+    gap: 2rem;                /* increased vertical gap between nav items */
+    padding-right: 28px;
+    margin-top: 80px; /* keep nav close to header */
+    padding-top: 80px;
+}
+
+/* ensure there's always some space at the bottom of the sidebar */
+.sidebar-nav:last-child {
+    margin-bottom: 1rem;
+}
+
+.nav-link {
+    display: flex;
+    align-items: center;
+
+    margin-right: 10px;
+    margin-bottom: 2rem;
+    /* further increased vertical gap between links */
+    padding: 1.15rem 1.25rem;         /* keep larger tappable area */
+    border-radius: 50px;
+    color: var(--text-color);
+    text-decoration: none;
+    font-weight: 600;
+    font-size: 1.05rem;               /* increase text size for nav link labels */
+    transition: background-color 0.25s ease, transform 0.22s ease;
+    transform-origin: left center;
+}
+
+
+
+/* ensure default button background is removed (user-agent may add a grey background) */
+.sidebar .nav-link {
+    background: transparent;
+    -webkit-appearance: none;
+    appearance: none;
+    padding-top: 20px;
+}
+
+/* Explicitly force non-active nav-links transparent to override UA or other rules while preserving .active */
+.sidebar .nav-link:not(.active) {
+    background: transparent !important;
+}
+
+.nav-link svg {
+    margin-right: 1.1rem;            /* slightly larger gap between icon and text */
+    font-size: 1.5rem;              /* increased icon size */
+    min-width: 24px;
+    transition: transform 0.32s cubic-bezier(.2,.8,.2,1), opacity 0.25s ease;}
+
+/* When collapsed, center icons and hide text */
+.sidebar.collapsed .nav-link {
+    justify-content: center;
+    padding: 0.8rem 0.25rem;         /* keep collapsed paddings slightly larger for hit area */
+    margin-right: 0;
+}
+
+.sidebar.collapsed .nav-link i {
+    margin-right: 0;
+    font-size: 1.4rem;
+    padding-left: 0; /* Remove padding when collapsed */
+}
+.nav-link i {
+    /*
+     * This is the line to change.
+     * Try 1.25rem, 1.5rem, or 20px.
+     */
+    margin-right: 0.7rem;  /* <-- INCREASE THIS VALUE */
+
+    font-size: 1.25rem;
+    min-width: 24px;
+    padding-left: 5px;
+    transition: transform 0.32s cubic-bezier(.2,.8,.2,1), opacity 0.25s ease;
+}
+
+.sidebar .nav-text {
+    transition: opacity 0.22s ease, transform 0.22s ease;
+}
+
+.sidebar.collapsed .nav-text {
+    opacity: 0;
+    transform: translateX(-8px);
+    pointer-events: none;
+    width: 0;
+    display: inline-block; /* keep layout stable for animation */
+}
+
+.sidebar:not(.collapsed) .nav-text {
+    opacity: 1;
+    transform: translateX(0);
+}
+
+.nav-link:hover {
+    background-color: var(--primary-color-light);
+    color: var(--primary-color);
+    transform: translateX(10px) scale(1.05);
+    cursor: pointer;
+}
+
+/* In collapsed state, avoid horizontal translate on hover to keep icons centered */
+.sidebar.collapsed .nav-link:hover {
+    transform: none;
+    background-color: rgba(255, 255, 255, 0.08);
+}
+
+.sidebar .nav-link.active {
+    /* make active tab use theme primary color and high-contrast text */
+    padding: 0.75rem 1.5rem;
+    border-radius: 25px;
+    background: rgba(0, 170, 255, 0.12); /* faint glassy background */
+    /* visible faint border */
+    border-color: var(--primary-color);
+
+
+}
+
+/* Active style when collapsed - keep icon highlighted but not translated */
+.sidebar.collapsed .nav-link.active {
+    transform: none;
+    box-shadow: none;
+    color: var(--text-color);
+    background: var(--primary-color-light);
+    padding: 0.8rem; /* <-- This is the fix */
+    border-radius: 12px;
+}
+
+/* subtle icon tilt animation on expand */
+.sidebar:not(.collapsed) .nav-link svg {
+    transform: rotate(0deg);
+}
+.sidebar.collapsed .nav-link svg {
+    transform: rotate(0deg);
+}
+
+/* make sidebar-header elements align nicely */
+.sidebar-header .sidebar-toggle-btn { order: 0; }
+.sidebar-header .logo { order: 1; }
+
+/* ensure the toggle button and logo stay on the same baseline */
+.sidebar-header .sidebar-toggle-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    height: 32px;
+}
+.sidebar-header .logo {
+    line-height: 1;
+}
+
+/* -------------------------------
+   🟢 Chat Support Button Styling
+--------------------------------*/
+.sidebar-chat-button {
+    margin-top: auto; /* pushes chat button to bottom */
+    padding: 0 0.75rem 1rem 0.75rem; /* bottom spacing */
+    display: flex;
+    justify-content: flex-start; /* align to left corner */
+}
+
+.sidebar-chat-button .chat-support {
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 6px;
+    background-color: rgba(53, 58, 173, 0.1); /* faint tint */
+    color: #61ca55;
+    font-size: 0.7rem; /* smaller font */
+    font-weight: 600;
+    padding: 0.15rem 0.0rem;
+    border-radius: 10px;
+    border: none;
+    width: 85%;
+    cursor: pointer;
+    transition: all 0.25s ease;
+}
+
+.sidebar-chat-button .chat-support:hover {
+    background-color: rgba(53, 58, 173, 0.2);
+    transform: translateY(-2px);
+}
+
+.sidebar-chat-button .chat-support svg {
+    font-size: 0.1rem;
+    color: #61ca55;
+}
+
+/* --- Add these rules to your Sidebar.css file --- */
+
+/* 1. Make the sidebar a full-height flex column */
+.sidebar {
+    display: flex;
+    flex-direction: column;
+    height: 100vh; /* Ensures it fills the screen height */
+}
+
+/* 2. Make the main nav list grow to fill all available empty space */
+.sidebar-nav {
+    flex-grow: 1;
+}
+
+/* 3. Style the new footer area */
+.sidebar-footer {
+    /* Adds some space around the bottom buttons */
+    padding: 1rem;
+}
+
+/* 4. Restore the 100% width for nav-links (that we removed from inline style) */
+/* This will NOT apply to the collapsed sidebar */
+.sidebar:not(.collapsed) .nav-link {
+    width: 100%;
+}
+
+/* 5. Style footer buttons when sidebar is collapsed (icon-only) */
+.sidebar.collapsed .sidebar-footer {
+    padding-top: 1rem;
+    padding-bottom: 1rem;
+}
+
+.sidebar.collapsed .sidebar-footer .nav-link {
+    /* Center the icon */
+    display: flex;
+    justify-content: center;
+
+    /* Give it a square-ish size */
+    width: 40px;
+    height: 40px;
+    padding: 0.5rem;
+    margin: 0.25rem auto; /* Center the button block */
+}

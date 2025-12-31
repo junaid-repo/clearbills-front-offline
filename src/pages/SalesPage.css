@@ -1,0 +1,166 @@
+/* SalesPage.css */
+
+/* Modal overlay */
+.order-modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+    animation: fadeIn 0.3s ease;
+}
+
+/* Modal content container */
+.order-modal-content {
+    background: var(--glass-bg);
+    border-radius: 25px;
+    padding: 2rem;
+    width: 90%;
+    max-width: 700px;
+    box-shadow: 0 8px 30px var(--shadow-color);
+    max-height: 90vh;
+    overflow-y: auto;
+    color: var(--text-color);
+    border: 1px solid var(--border-color);
+    animation: slideIn 0.3s ease;
+}
+
+/* Modal header */
+.order-modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 2px solid var(--border-color);
+    margin-bottom: 1.5rem;
+    padding-bottom: 0.5rem;
+    color: var(--primary-color);
+}
+
+.order-modal-header h2 {
+    margin: 0;
+    font-size: 1.8rem;
+}
+
+.close-button {
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: var(--text-color);
+}
+
+/* Reusable box for sections */
+.order-box {
+    margin-bottom: 2rem;
+}
+
+.order-box h3 {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 1.2rem;
+    margin-bottom: 1rem;
+}
+
+/* Detail item (Customer, Email, etc.) */
+.detail-item {
+    display: flex;
+    align-items: center;
+    gap: 0.9rem;
+    margin-bottom: 0.7rem;
+    font-size: 1rem;
+
+}
+
+/* Order items list */
+.order-items-list {
+    list-style: none;
+    padding: 0;
+    margin-top: 2.5rem;
+    border-top: 1px solid #eee;
+    padding-top: 60px;
+}
+
+.order-item {
+    padding: 0.8rem 0.2rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 1.1rem;
+    font-weight: 500;
+    border-bottom: 1px solid var(--border-color);
+
+}
+
+.order-item:last-child {
+    border-bottom: none;
+}
+
+/* Summary row (Subtotal, Tax, etc.) */
+.summary-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 0.3rem 0;
+    font-size: 1.05rem;
+    border-top: 2px solid var(--border-color);
+    margin: 0.75rem 0;
+}
+
+/* Divider line */
+.summary-divider {
+    border-top: 0px solid #eee;
+    margin: 0.75rem 0;
+}
+
+.gstTotal{
+    font-size: 1.2rem;
+    font-weight: bold;
+    color: var(--primary-color);
+    display: flex;
+    justify-content: space-between;
+}
+
+/* Total line */
+.total-amount {
+    font-size: 1.6rem;
+    font-weight: bold;
+    color: var(--primary-color);
+    display: flex;
+    justify-content: space-between;
+}
+.order-items-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 1rem;
+    font-size: 1rem;
+    color: var(--text-color);
+}
+
+.order-items-table th,
+.order-items-table td {
+    padding: 0.75rem 1rem;
+    text-align: left;
+    border-bottom: 2px dashed var(--border-color);
+}
+
+.order-items-table th {
+    background-color: var(--glass-bg);
+    color: var(--primary-color);
+    font-weight: bold;
+}
+
+.order-items-table tr:last-child td {
+    border-bottom: none;
+}
+.pagination-ellipsis {
+    padding: 8px 12px;
+    margin: 0 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--text-color);
+}

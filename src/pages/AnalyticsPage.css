@@ -1,0 +1,304 @@
+.main-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 12px; /* Reduced gap */
+}
+
+.grid-col-2 {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 12px; /* Reduced gap */
+}
+
+/* --- Filter Bar (Section 1) --- */
+.filter-bar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 16px;
+    margin-bottom: 12px; /* Reduced margin */
+
+    /* --- Added for sticky header --- */
+    position: relative;
+    top: 0;
+    z-index: 10;
+    /* The .glass-card class might have a translucent background.
+       If content scrolls under it weirdly, you may need to force a solid background.
+       You can try uncommenting the line below.
+    */
+    background-color: var(--modal-bg);
+}
+
+.dashboard-title {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--text-color);
+    margin: 0;
+    margin-right: auto;
+    transition: color 0.3s ease;
+}
+
+.date-filter {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.date-filter label {
+    font-size: 0.9rem;
+    color: var(--text-color);
+    transition: color 0.3s ease;
+}
+
+/* Custom .date-input style mimicking your global .form-group input */
+.date-input {
+    padding: 0.75rem;
+    border: 1px solid var(--input-border);
+    background-color: var(--input-bg);
+    color: var(--text-color);
+    border-radius: 8px;
+    font-size: 1rem;
+}
+
+.animate-spin {
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    from {
+        transform: rotate(0deg);
+    }
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+
+/* --- Chart Cards (Sections 2, 3, 4) --- */
+.chart-title {
+    font-size: 1.1rem; /* Reduced font size */
+    font-weight: 600;
+    color: var(--text-color);
+    margin-bottom: 1px; /* Reduced margin */
+    transition: color 0.3s ease;
+}
+
+.chart-title-small {
+    font-size: 0.95rem; /* Reduced font size */
+    font-weight: 600;
+    color: var(--text-color);
+    margin-bottom: 8px; /* Reduced margin */
+    text-align: center;
+    transition: color 0.3s ease;
+}
+
+.chart-inner-container {
+    height: 200px; /* Reduced height */
+    position: relative;
+}
+
+.chart-inner-container-large {
+    height: 250px; /* Reduced height */
+    position: relative;
+}
+
+/* --- Section 2 Specifics --- */
+.doughnut-container {
+    display: flex;
+    flex-direction: row; /* Changed to row */
+    justify-content: space-around; /* Spaced out */
+    align-items: center; /* Vertically centered */
+    gap: 16px;
+    flex-wrap: wrap; /* Allow wrapping on small screens */
+}
+
+.doughnut-chart-wrapper {
+    flex: 1;
+    min-width: 150px; /* Give a min-width for wrapping */
+    position: relative; /* For centering text */
+}
+
+/* Styles for the text in the middle of the doughnut */
+.doughnut-center-text {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    text-align: center;
+    pointer-events: none; /* Allows clicks to go "through" to the chart */
+}
+
+.doughnut-total-value {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: var(--text-color);
+    transition: color 0.3s ease;
+}
+
+
+/* --- Section 3 Specifics --- */
+.chart-header {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 16px;
+    margin-bottom: 12px; /* Reduced margin */
+}
+
+.totals-container {
+    display: flex;
+    gap: 24px;
+}
+
+.total-box {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+}
+
+.total-label {
+    font-size: 0.8rem;
+    color: var(--tiny-text-color, #6c757d); /* Use variable with fallback */
+    text-transform: uppercase;
+    transition: color 0.3s ease;
+}
+
+.total-value {
+    font-size: 1.25rem;
+    font-weight: 700;
+}
+.total-value.revenue {
+    color: var(--primary-color, #6366f1); /* Use variable with fallback */
+}
+.total-value.stock {
+    /* Use a different gradient-friendly color */
+    color: var(--primary-color);
+}
+
+/* --- ADDED: Total value for Profit --- */
+.total-value.profit {
+    color: rgba(198, 69, 157, 0.9);
+}
+
+/* --- Section 4 Specifics (Bubbles) --- */
+.bubble-layout-container {
+    display: flex;
+    justify-content: center; /* Center bubbles */
+    align-items: center;
+    height: 100%;
+    gap: 10px; /* Increased gap */
+    flex-wrap: wrap;
+    padding: 1px 0; /* Add padding for space */
+}
+.product-bubble {
+    /* background-color: var(--primary-color-light); */ /* Replaced this */
+
+    /* --- Glass-like translucent effect --- */
+    background-color: rgba(0, 0, 0, 0.1); /* Darker translucent background */
+    backdrop-filter: blur(40px);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    /* --- End of glass effect --- */
+
+    color: var(--text-color); /* Use variable */
+    border-radius: 50%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    font-weight: 600;
+    text-align: center;
+    padding: 0px;
+    /* Use variable */
+    transition: transform 0.2s ease, background-color 0.2s ease; /* Added background-color to transition */
+    cursor: default;
+    /* opacity: 0.8; */ /* Removed this, as rgba background handles translucency */
+}
+.product-bubble:hover {
+    transform: scale(1.05);
+    background-color: rgba(0, 0, 0, 0.2); /* Slightly darker on hover */
+}
+.bubble-count {
+    font-size: 1.2rem; /* Increased font size */
+    line-height: 1.1;
+    font-style: italic; /* Added italic style */
+}
+.bubble-name {
+    font-size: 0.75rem; /* Increased font size */
+    margin-top: 3px; /* Increased margin */
+    max-width: 90px; /* Prevent long names from breaking layout */
+    overflow-wrap: break-word;
+    font-style: italic; /* Added italic style */
+}
+
+/* --- ADDED: Dark theme override for bubbles --- */
+.dark-theme .product-bubble {
+    /* Light glass effect for dark mode */
+    background-color: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.dark-theme .product-bubble:hover {
+    background-color: rgba(255, 255, 255, 0.1);
+}
+
+
+/* --- Responsive Layout --- */
+@media (min-width: 768px) {
+    .grid-col-2 {
+        grid-template-columns: 1fr 1fr;
+    }
+
+    .chart-inner-container {
+        height: 190px; /* Reduced height */
+    }
+}
+
+@media (min-width: 1024px) {
+    /* Keep doughnuts side-by-side even on large screens */
+    .doughnut-container {
+        flex-direction: row;
+    }
+
+    .doughnut-chart-wrapper {
+        width: 100%;
+    }
+
+    .chart-inner-container {
+        height: 200px; /* Reduced height */
+    }
+}
+
+/* --- Recharts tooltip (using variables) --- */
+.recharts-tooltip-wrapper {
+    background-color: var(--modal-bg) !important;
+    border: 1px solid var(--border-color) !important;
+    border-radius: 8px !important;
+    box-shadow: 0 4px 12px var(--shadow-color) !important;
+    transition: background-color 0.3s ease, border-color 0.3s ease;
+}
+
+.recharts-tooltip-label {
+    color: var(--text-color) !important;
+    font-weight: 600;
+    margin-bottom: 4px !important;
+    transition: color 0.3s ease;
+}
+
+/* --- ADDED: Date Error Message --- */
+.date-error-message {
+    color: #dc3545; /* Bootstrap danger red */
+    background-color: rgba(220, 53, 69, 0.1);
+    border: 1px solid rgba(220, 53, 69, 0.5);
+    border-radius: 8px;
+    padding: 10px 15px;
+    margin: -4px 0 12px 0;
+    font-size: 0.9rem;
+    text-align: center;
+}
+
+.dark-theme .date-error-message {
+    color: #ff8a80; /* Lighter red for dark mode */
+    background-color: rgba(255, 138, 128, 0.1);
+    border: 1px solid rgba(255, 138, 128, 0.3);
+}

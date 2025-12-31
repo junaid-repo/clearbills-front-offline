@@ -1,0 +1,70 @@
+/* * This wrapper is the magic. It's a "relative" container
+ * so we can position the icon and tooltip.
+ */
+.premium-feature-wrapper {
+    position: relative;
+    display: inline-block; /* Make it fit the button's width */
+    cursor: pointer;
+}
+
+/* * This class applies the "disabled" look to the button inside.
+ * `pointer-events: none;` is CRITICAL. It makes sure the click
+ * goes to the wrapper div, not the disabled button.
+ */
+.premium-feature-disabled-child {
+    opacity: 0.6;
+    pointer-events: none;
+}
+
+/* * The Crown Icon.
+ * We use `position: absolute` to place it on top.
+ */
+.premium-feature-icon {
+    position: absolute;
+    top: -8px; /* Adjust as needed */
+    right: -8px; /* Adjust as needed */
+    z-index: 1;
+
+    background-color: white; /* Or var(--background-color) */
+    border-radius: 50%;
+    padding: 3px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 0 5px rgba(0,0,0,0.2);
+}
+
+.premium-feature-icon svg {
+    color: #f59e0b; /* Gold */
+    font-size: 0.8em;
+}
+
+/* * The Tooltip.
+ * It's hidden by default.
+ */
+.premium-feature-wrapper[data-tooltip]::after {
+    content: attr(data-tooltip);
+    position: absolute;
+    bottom: 110%; /* Position above the element */
+    left: 50%;
+    transform: translateX(-50%);
+
+    background-color: #333;
+    color: white;
+    padding: 5px 10px;
+    border-radius: 5px;
+    font-size: 0.8rem;
+    white-space: nowrap;
+
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.2s ease, visibility 0.2s ease;
+    z-index: 10;
+}
+
+/* * Show the tooltip on hover
+ */
+.premium-feature-wrapper[data-tooltip]:hover::after {
+    opacity: 1;
+    visibility: visible;
+}

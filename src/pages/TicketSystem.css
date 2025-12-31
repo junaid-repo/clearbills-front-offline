@@ -1,0 +1,139 @@
+/* src/pages/TicketSystem.css */
+
+.ticket-list-container {
+    padding: 2rem;
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+.ticket-list-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1.5rem;
+}
+
+.ticket-list-header h2 {
+    margin: 0;
+}
+
+.tickets-table-wrapper {
+    overflow-x: auto;
+    margin-bottom: 10rem;
+}
+
+.tickets-table {
+    width: 100%;
+}
+
+.status-badge {
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-weight: 500;
+    font-size: 0.85em;
+    color: #fff;
+    text-transform: capitalize;
+}
+
+.status-open {
+    background-color: #28a745; /* Green */
+}
+
+.status-closed {
+    background-color: #6c757d; /* Gray */
+}
+
+/* Styles for Create Ticket Form */
+.topic-selection-container .form-group {
+    text-align: left;
+    margin-bottom: 1rem;
+}
+
+.topic-selection-container .form-group label {
+    display: block;
+    margin-bottom: 0.5rem;
+    font-weight: 500;
+}
+
+.topic-selection-container .form-group select,
+.topic-selection-container .form-group textarea {
+    width: 100%;
+    padding: 10px;
+    border-radius: 8px;
+    border: 1px solid var(--border-color);
+    background: var(--input-bg);
+    color: var(--text-color);
+    font-size: 1rem;
+}
+
+.topic-selection-container .form-group textarea {
+    min-height: 100px;
+    resize: vertical;
+}
+
+.back-link-button {
+    background: none;
+    border: none;
+    color: var(--primary-color);
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    margin-bottom: 1.5rem;
+    padding: 0;
+}
+
+
+/* Styles for Close Ticket Modal */
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.6);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 2000;
+}
+
+
+
+
+
+/* Add to src/pages/TicketSystem.css */
+
+.ticket-actions {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+
+.action-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 5px 10px;
+    font-size: 0.8em;
+    border-radius: 15px;
+    border: none;
+    cursor: pointer;
+    color: white;
+    font-weight: 500;
+}
+
+.action-btn.continue {
+    background-color: var(--primary-color);
+}
+
+.action-btn.close {
+    background-color: #dc3545; /* Red */
+}
+
+.chat-header-actions {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}

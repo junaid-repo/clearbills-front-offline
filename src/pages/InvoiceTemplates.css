@@ -1,0 +1,160 @@
+/* InvoiceTemplates.css */
+
+.invoice-templates-tab h3 {
+    margin-bottom: 8px;
+    color: var(--primary-color); /* Or your preferred heading color */
+}
+
+.invoice-templates-tab p {
+    margin-bottom: 25px;
+    color: var(--text-color);
+    font-size: 0.95em;
+}
+
+.template-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr); /* 3 columns */
+    gap: 45px; /* Spacing between grid items */
+}
+
+.template-card {
+    border: 1px solid var(--border-color, #ddd);
+    border-radius: 8px;
+    overflow: hidden;
+    background-color: #fff; /* White background for cards */
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+    transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+    cursor: pointer;
+    position: relative; /* Needed for the selected indicator */
+    padding: 25px;
+}
+
+.template-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 5px 12px rgba(0, 0, 0, 0.1);
+}
+
+.template-card.selected {
+    border: 2px solid var(--primary-color, #007bff); /* Highlight selected */
+    box-shadow: 0 4px 10px rgba(0, 123, 255, 0.2);
+}
+
+.template-card.selected::after { /* Optional: Add a checkmark or indicator */
+    content: '✔';
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    background-color: var(--primary-color, #007bff);
+    color: white;
+    border-radius: 50%;
+    width: 20px;
+    height: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+}
+
+.template-image {
+    width: 100%;
+    height: auto; /* Maintain aspect ratio */
+    aspect-ratio: 3 / 4; /* Adjust aspect ratio if needed */
+    object-fit: cover; /* Cover the area */
+    object-position: top center; /* Show the top part */
+    display: block;
+    border-bottom: 1px solid var(--border-color, #ddd);
+}
+
+.template-info {
+    padding: 12px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.template-name {
+    font-weight: 500;
+    color: var(--text-color, #333);
+    font-size: 0.9em;
+}
+
+.select-btn {
+    padding: 6px 12px;
+    font-size: 0.85em;
+    min-width: 80px; /* Give buttons a consistent minimum width */
+    text-align: center;
+}
+
+.select-btn:disabled {
+    background-color: #ccc;
+    cursor: not-allowed;
+    opacity: 0.7;
+}
+
+
+/* --- Template Modal Styles --- */
+.template-modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.7); /* Dark semi-transparent background */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000; /* Ensure it's on top */
+    backdrop-filter: blur(5px);
+}
+
+.template-modal-content {
+    background-color: #fff;
+    padding: 30px;
+    border-radius: 10px;
+    max-width: 100vw; /* Limit width */
+    max-height: 110vh; /* Limit height */
+    overflow-y: auto; /* Allow scrolling if content is too tall */
+    position: relative;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+    text-align: center; /* Center content */
+}
+
+.close-modal-btn {
+    position: absolute;
+    top: 10px;
+    right: 15px;
+    background: none;
+    border: none;
+    font-size: 2rem;
+    color: var(--text-color, #888);
+    cursor: pointer;
+    line-height: 1;
+}
+.close-modal-btn:hover {
+    color: var(--text-color, #333);
+}
+
+.modal-image-full {
+    max-width: 100%;
+    max-height: 90vh; /* Limit image height within modal */
+    object-fit: contain; /* Show full image */
+    margin-bottom: 20px;
+    border: 1px solid var(--border-color, #eee);
+    border-radius: 5px;
+}
+
+.template-modal-content h4 {
+    margin-top: 0;
+    margin-bottom: 15px;
+    color: var(--primary-color, #007bff);
+}
+
+.select-btn-modal {
+    padding: 10px 20px;
+    font-size: 1em;
+}
+
+.select-btn-modal:disabled {
+    background-color: #aaa;
+    cursor: not-allowed;
+}

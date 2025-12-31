@@ -1,0 +1,23 @@
+/* index.css or global CSS */
+
+.shortcut-key {
+    display: inline-block;
+    padding: 3px 6px;
+    font-family: monospace; /* Use a monospaced font */
+    font-size: 0.8em;
+    font-weight: bold;
+    line-height: 1;
+    color: var(--text-color);
+    background-color: var(--background-color); /* Slightly different background */
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    box-shadow: 0 1px 1px rgba(0, 0, 0, 0.1);
+    white-space: nowrap;
+}
+
+/* Optional: Dark theme adjustments if needed */
+body.dark-theme .shortcut-key {
+    background-color: var(--input-bg); /* Use input background in dark mode */
+    border-color: #555; /* Darker border */
+    color: var(--text-color);
+}

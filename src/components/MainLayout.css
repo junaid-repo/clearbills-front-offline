@@ -1,0 +1,85 @@
+/* src/components/MainLayout.css */
+
+/*
+ * This is the main app wrapper.
+ * It's a column layout to stack Topbar on top of content-area.
+ */
+.app-layout {
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    width: 100vw;
+    overflow: hidden; /* Prevents the whole page from scrolling */
+}
+
+/*
+ * This wrapper holds everything *below* the topbar.
+ * It's a row layout for Sidebar + Main Content.
+ */
+.content-area {
+    display: flex;
+    flex-grow: 1; /* Takes up all remaining vertical space */
+
+    /* * --- THIS IS FIX #1 ---
+     * Changed 60px to 85px to match your Topbar's height.
+     */
+    height: calc(100vh - 85px);
+    overflow: hidden;
+}
+
+
+/* * --- THIS IS FIX #2 ---
+ * .main-content is now a flex container
+ */
+/* src/components/MainLayout.css */
+
+/* ... (keep all your existing .app-layout, .content-area, etc. rules) ... */
+
+
+/* --- ADD THESE NEW RULES --- */
+
+/*
+ * This pushes the main content to the right
+ * to make space for your position:fixed sidebar.
+ */
+.main-content {
+    /* Use the sidebar width variable from your global.css */
+    margin-left: var(--sidebar-width);
+
+    /* Add a transition to match the sidebar's animation */
+    transition: margin-left 0.32s cubic-bezier(.2,.8,.2,1);
+
+    /* --- Keep all the flex rules from before --- */
+    flex-grow: 1;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+/*
+ * When the sidebar is collapsed, we must
+ * reduce the margin-left to match.
+ * (92px is from your Sidebar.css)
+ */
+.app-layout.collapsed .main-content {
+    margin-left: 92px;
+}
+
+/*
+ * This rule makes ONLY the <main> area scrollable.
+ * (This rule should already exist, just ensure it's there)
+ */
+.main-content main {
+    padding: 24px;
+    flex-grow: 1;
+    overflow-y: auto;
+}
+
+/*
+ * This rule keeps the footer at the bottom.
+ * (This rule should already exist, just ensure it's there)
+ */
+.main-content .footer {
+    flex-shrink: 0;
+}

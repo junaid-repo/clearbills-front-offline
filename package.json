@@ -1,0 +1,103 @@
+{
+  "name": "shop-management-app-updated",
+  "version": "0.1.0",
+  "private": true,
+  "main": "public/electron.js",
+  "homepage": "./",
+  "proxy": "http://localhost:6062",
+  "author": "Junaid <junaidraza3002@gmail.com>",
+  "dependencies": {
+    "@emotion/react": "^11.14.0",
+    "@emotion/styled": "^11.14.1",
+    "@fortawesome/fontawesome-svg-core": "^7.1.0",
+    "@fortawesome/free-solid-svg-icons": "^7.1.0",
+    "@fortawesome/react-fontawesome": "^3.1.0",
+    "@mui/icons-material": "^7.3.1",
+    "@mui/material": "^7.3.1",
+    "@phosphor-icons/react": "^2.1.10",
+    "@react-oauth/google": "^0.12.2",
+    "@stomp/stompjs": "^7.2.1",
+    "@tanstack/react-query": "^5.85.5",
+    "@testing-library/dom": "^10.4.1",
+    "@testing-library/jest-dom": "^6.7.0",
+    "@testing-library/react": "^16.3.0",
+    "@testing-library/user-event": "^13.5.0",
+    "axios": "^1.11.0",
+    "chart.js": "^4.5.0",
+    "is-electron": "^2.2.2",
+    "jwt-decode": "^4.0.0",
+    "lucide-react": "^0.544.0",
+    "react": "^19.1.1",
+    "react-chartjs-2": "^5.3.0",
+    "react-dom": "^19.1.1",
+    "react-hot-toast": "^2.6.0",
+    "react-icons": "^5.5.0",
+    "react-responsive-carousel": "^3.2.23",
+    "react-router-dom": "^7.9.4",
+    "react-scripts": "5.0.1",
+    "react-toastify": "^11.0.5",
+    "recharts": "^3.2.1",
+    "sockjs-client": "^1.6.1",
+    "web-vitals": "^2.1.4",
+    "xlsx": "^0.18.5"
+  },
+  "scripts": {
+    "start": "react-scripts start",
+    "build": "react-scripts build",
+    "test": "react-scripts test",
+    "eject": "react-scripts eject",
+    "electron-pack": "npm run build && electron-builder build -c.extraMetadata.main=build/electron.js"
+  },
+  "eslintConfig": {
+    "extends": [
+      "react-app",
+      "react-app/jest"
+    ]
+  },
+  "browserslist": {
+    "production": [
+      ">0.2%",
+      "not dead",
+      "not op_mini all"
+    ],
+    "development": [
+      "last 1 chrome version",
+      "last 1 firefox version",
+      "last 1 safari version"
+    ]
+  },
+  "devDependencies": {
+    "concurrently": "^9.2.1",
+    "cross-env": "^10.1.0",
+    "electron": "^39.2.6",
+    "electron-builder": "^26.0.12",
+    "wait-on": "^9.0.3"
+  },
+
+  "build": {
+  "appId": "com.yourname.billingapp",
+  "productName": "My Billing App",
+  "files": [
+    "build/**/*",
+    "public/electron.js"
+  ],
+  "extraResources": [
+    {
+      "from": "../ShopAppBackEnd/shop/target/shop-0.0.3-USER_SPECIFIC.jar",
+      "to": "billing-app.jar"
+    }
+  ],
+  "win": {
+    "target": "nsis",
+    "icon": "public/icon.ico"
+  },
+  "linux": {
+    "target": "deb",
+    "icon": "public/icon.png",
+    "category": "Office"
+  }
+}
+
+
+
+}

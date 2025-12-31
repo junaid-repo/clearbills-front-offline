@@ -1,0 +1,1493 @@
+/* Light Theme Variables (Default) */
+:root {
+    --primary-color: #00aaff;
+    --primary-color-light: #e0f7ff;
+    --background-color: #f0f8ff;
+    --glass-bg: rgba(255, 255, 255, 0.89); /* Slightly more opaque for better readability */
+    --border-color: rgba(224, 247, 255, 0.7);
+    --shadow-color: rgb(0 0 0 / 15%);
+    --text-color: #103784;
+    --sidebar-width: 280px;
+    --body-bg: rgba(240, 248, 255, 0.48);
+    --modal-bg: #ffffff;
+    --input-bg: #ffffff;
+    --input-border: #ddd;
+    --table-hover-bg: rgba(224, 247, 255, 0.5);
+    --pagination-bg: #fff;
+    --pagination-border: #ccc;
+    --tiny-text-color: #9d9898;
+    --pagination-disabled-bg: #f2f2f2;
+    --pagination-disabled-color: #999;
+    --error-bg: rgba(207, 50, 50, 0.39);
+    --error-message: #ff6b6b;
+    --error-color: #c80b0b;
+    --selected-green: #eafff0;
+    --selected-red: #ffd5da;
+    --small-bg-cyan: rgba(105, 207, 9, 0.13);
+    --bp-order-summary-bg: var(--modal-bg, #fff); /* global fallback for billing/order summary */
+}
+
+/* Dark Theme Variables */
+body.dark-theme {
+    --primary-color: rgba(0, 170, 255, 0.49); /* Keep brand color consistent */
+    --primary-color-light: rgba(0, 170, 255, 0.15);
+    --background-color: #0d1117;
+    --glass-bg: rgba(22, 33, 71, 0.65);
+    --border-color: rgba(139, 148, 158, 0.3);
+    --shadow-color: rgba(0, 0, 0, 0.5);
+    --text-color: #c9d1d9;
+    --body-bg: #111135;
+    --modal-bg: rgb(33, 60, 103);
+    --input-bg: #0d1117;
+    --input-border: var(--border-color);
+    --table-hover-bg: rgba(0, 170, 255, 0.1);
+    --tiny-text-color: #f4efef;
+    --selected-green: #40704d;
+    --selected-red: #9b565e;
+    --error-color: #fa7171;
+    --pagination-bg: #21262d;
+    --pagination-border: var(--border-color);
+    --pagination-disabled-bg: #161b22;
+    --pagination-disabled-color: #484f58;
+    --bp-order-summary-bg: var(--modal-bg, #161b22); /* ensure billing/order summaries have a bg in dark theme */
+    --small-bg-cyan: rgb(31, 132, 120);
+}
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: 'lemon_milk_pro_regular_webfont', sans-serif; /* Added sans-serif fallback */
+}
+
+body {
+    background-color: var(--body-bg);
+    color: var(--text-color);
+    overflow-x: hidden;
+    transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+
+/* Ensure the top spacing of cards aligns well with Topbar */
+.glass-card {
+    margin-top: 20px; /* reduced so content sits closer under topbar */
+}
+
+
+
+
+
+/* Glassmorphism Card */
+.glass-card {
+    background: var(--glass-bg);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px); /* For Safari */
+    border-radius: 30px;
+    border: 2px solid var(--border-color);
+    box-shadow: 0 4px 20px var(--shadow-color);
+    padding: 1.5rem;
+    margin-top: 20px;
+}
+
+/* Search bar */
+.search-bar {
+    width: 100%; /* full width of container or parent */
+    max-width: 300px; /* optional: limit width */
+    padding: 0.6rem 1.25rem;
+    border: 1px solid rgba(39, 63, 107, 0.3); /* subtle border */
+    border-radius: 15px; /* fully rounded pill shape */
+    background: var(--modal-bg, #ffffff);
+
+    color: var(--text-color, #272f6b);
+    font-size: 1rem;
+    outline: none;
+
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08); /* soft shadow */
+    transition: all 0.25s ease;
+    position: relative;
+
+    /* Smooth inner placeholder text */
+    caret-color: var(--primary-color);
+}
+
+/* Hover effect */
+.search-bar:hover {
+    border-color: var(--primary-color);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+}
+
+/* Focus effect */
+.search-bar:focus {
+    border-color: var(--primary-color);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.18);
+    background: var(--body-bg, #ffffff);
+}
+
+/* Optional: placeholder styling */
+.search-bar::placeholder {
+    color: rgba(39, 63, 107, 0.5);
+    font-weight: 400;
+}
+
+/* Optional: add a search icon inside (requires wrapping with a container) */
+.search-container {
+    position: relative;
+    display: flex;
+    align-items: center;
+    width: 100%;
+    max-width: 300px;
+}
+
+.search-container svg {
+    position: absolute;
+    left: 12px;
+    width: 18px;
+    height: 18px;
+    fill: rgba(39, 63, 107, 0.5);
+    pointer-events: none;
+}
+
+.search-bar.with-icon {
+    padding-left: 2.5rem; /* leave space for icon */
+}
+
+
+/* Glass Buttons - Light Theme */
+.btn {
+    padding: 0.75rem 1.5rem;
+    border-radius: 25px;
+     /* faint glassy background */
+    background: var(--primary-color-light);
+
+    border: 2px solid rgba(0, 170, 255, 0.3); /* visible faint border */
+    backdrop-filter: blur(8px); /* frosted effect */
+    -webkit-backdrop-filter: blur(8px);
+    color: #003366; /* darker readable text */
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.25s ease;
+    box-shadow: 0 4px 12px rgba(0, 50, 100, 0.25); /* darker shadow for light bg */
+}
+
+
+
+.btn:hover:not(:disabled) {
+    transform: translateY(-2px) scale(1.02);
+    background: rgba(15, 165, 243, 0.65);
+    box-shadow: 0 6px 18px rgba(0, 50, 100, 0.35);
+    border-color: rgba(186, 217, 232, 0.45);
+    color: white;
+}
+
+.btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    box-shadow: none;
+}
+
+/* Cancel button modifier */
+.btn-cancel {
+    background: rgba(255, 107, 107, 0.15);
+    border: 1px solid rgba(255, 107, 107, 0.4);
+    color: #b30000; /* darker red text for visibility */
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+}
+
+.btn-cancel:hover:not(:disabled) {
+    background: rgba(255, 107, 107, 0.25);
+    box-shadow: 0 6px 18px rgba(179, 0, 0, 0.35);
+    border-color: rgba(255, 107, 107, 0.55);
+}
+
+.dark-theme .btn {
+    padding: 0.75rem 1.5rem;
+    border-radius: 25px;
+    background: rgba(0, 170, 255, 0.12); /* faint glassy background */
+    border: 1px solid rgba(0, 170, 255, 0.3); /* visible faint border */
+    backdrop-filter: blur(8px); /* frosted effect */
+    -webkit-backdrop-filter: blur(8px);
+    color: #ffffff; /* darker readable text */
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.25s ease;
+    box-shadow: 0 4px 12px rgba(0, 50, 100, 0.25); /* darker shadow for light bg */
+}
+
+
+/* Table Styles */
+.data-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 2rem;
+}
+
+.data-table th,
+.data-table td {
+    padding: 0.8rem;
+    text-align: left;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.data-table th {
+    background: var(--primary-color-light);
+    color: var(--primary-color);
+    font-weight: 600;
+}
+
+.data-table tr:last-child td {
+    border-bottom: none;
+}
+
+.data-table tr:hover {
+    background-color: var(--table-hover-bg);
+}
+
+/* Alternate row colors */
+.data-table tbody tr:nth-child(even) {
+    background-color: var(--body-bg); /* light grey */
+}
+
+.data-table tbody tr:nth-child(odd) {
+    background-color: transparent;
+}
+
+/* ---- Dark mode overrides ---- */
+.dark-theme .data-table {
+    color: #fff; /* Table body text */
+}
+
+.dark-theme .data-table th {
+    background: rgba(50, 50, 50, 0.9);
+    color: #fff; /* Table header text */
+    border-bottom: 1px solid #555;
+}
+
+.dark-theme .data-table td {
+    border-bottom: 1px solid #444;
+}
+
+/* Alternate row colors in dark theme */
+.dark-theme .data-table tbody tr:nth-child(even) {
+    background-color: rgba(255, 255, 255, 0.05); /* subtle light shade */
+}
+
+.dark-theme .data-table tbody tr:nth-child(odd) {
+    background-color: transparent;
+}
+
+
+/* Status colors in dark mode */
+.dark-theme .status-paid {
+    color: #90ee90; /* lighter green */
+}
+
+.dark-theme .status-pending {
+    color: #ffb84d; /* softer orange for contrast */
+}
+
+/* Download button stays visible in dark mode */
+.dark-theme .download-btn {
+    background-color: rgba(108, 219, 17, 0.3);
+    color: #fff;
+}
+
+/* Status Badges */
+.status-paid, .status-instock {
+    background-color: #d1fae5;
+    color: #065f46;
+    padding: 4px 8px;
+    border-radius: 12px;
+    font-size: 0.8rem;
+}
+
+.status-pending, .status-outofstock {
+    background-color: #fee2e2;
+    color: #991b1b;
+    padding: 4px 8px;
+    border-radius: 12px;
+    font-size: 0.8rem;
+}
+
+body.dark-theme .status-paid,
+body.dark-theme .status-instock {
+    background-color: #0c2b1f;
+    color: #35d399;
+}
+
+body.dark-theme .status-pending,
+body.dark-theme .status-outofstock {
+    background-color: #3b1717;
+    color: #ff8b8b;
+}
+
+/* Modal Styles */
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+    animation: fadeIn 0.3s ease;
+}
+
+.modal-content {
+    background: var(--modal-bg);
+    padding: 2rem;
+    border-radius: 15px;
+    width: 90%;
+    max-width: 500px;
+    animation: slideIn 0.3s ease;
+}
+
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1.5rem;
+    color: var(--primary-color);
+}
+
+.modal-header h2 {
+    margin: 0;
+}
+
+.close-btn {
+    background: none;
+    border: none;
+    font-size: 1.5rem;
+    cursor: pointer;
+    color: var(--text-color);
+}
+
+/* Form Styles */
+.form-group {
+    margin-bottom: 1rem;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 0.5rem;
+}
+
+.form-group input,
+.form-group select {
+    width: 100%;
+    padding: 0.75rem;
+    border: 1px solid var(--input-border);
+    background-color: var(--input-bg);
+    color: var(--text-color);
+    border-radius: 8px;
+    font-size: 1rem;
+}
+
+.form-actions {
+    margin-top: 1.5rem;
+    text-align: right;
+}
+
+/* Pagination */
+.pagination {
+    display: flex;
+    justify-content: center;
+    margin: 1rem 0;
+}
+
+.pagination button {
+    background: var(--pagination-bg);
+    border: 1px solid var(--pagination-border);
+    color: var(--text-color);
+    margin: 0 0.2rem;
+    padding: 0.4rem 0.75rem;
+    cursor: pointer;
+    border-radius: 4px;
+}
+
+.pagination button.active {
+    background: var(--primary-color);
+    color: #fff;
+    border-color: var(--primary-color);
+}
+
+.pagination button:disabled {
+    background: var(--pagination-disabled-bg);
+    color: var(--pagination-disabled-color);
+    cursor: default;
+}
+
+/* Time-range selector */
+.time-range-selector {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    margin: 0.5rem 0;
+    padding: 0.5rem 1rem;
+    border-radius: 30px;
+    background: var(--glass-bg);
+    border: 1px solid var(--border-color);
+    box-shadow: 0 4px 20px var(--shadow-color);
+    width: fit-content;
+}
+
+.time-range-selector label {
+    font-weight: 600;
+    color: var(--text-color);
+    font-size: 0.95rem;
+}
+
+.time-range-selector select {
+    padding: 0.4rem 1rem;
+    border-radius: 999px;
+    border: none;
+    background-color: rgba(255, 255, 255, 0.6);
+    color: var(--text-color);
+    font-size: 0.95rem;
+    outline: none;
+    cursor: pointer;
+    min-width: 140px;
+    max-width: 200px;
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg fill='black' height='16' viewBox='0 0 24 24' width='16' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M7 10l5 5 5-5z'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 0.7rem center;
+    background-size: 16px;
+}
+
+body.dark-theme .time-range-selector select {
+    background-color: rgba(33, 38, 45, 0.8);
+    background-image: url("data:image/svg+xml,%3Csvg fill='white' height='16' viewBox='0 0 24 24' width='16' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M7 10l5 5 5-5z'/%3E%3C/svg%3E");
+}
+
+.time-range-selector select:focus {
+    background-color: rgba(255, 255, 255, 0.8);
+    box-shadow: 0 0 0 2px var(--primary-color-light);
+}
+
+body.dark-theme .time-range-selector select:focus {
+    background-color: rgba(56, 62, 70, 0.9);
+}
+
+.time-range-selector select option {
+    background-color: var(--modal-bg); /* Use modal-bg for consistency */
+    color: var(--text-color);
+}
+
+/* Profile-Page Specific Styles */
+.two-column {
+    display: flex;
+    gap: 2rem;
+    flex-wrap: wrap;
+}
+
+.column {
+    flex: 1;
+    min-width: 280px;
+}
+
+.avatar {
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    object-fit: cover;
+    margin-top: 0.5rem;
+    border: 2px solid var(--border-color);
+}
+
+.button-row {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    margin-top: 1.5rem;
+}
+
+/* Validation Feedback */
+.input-error {
+    border-color: #ff6b6b !important; /* Use important to override other border styles */
+    background-color: rgba(255, 107, 107, 0.15);
+}
+
+.error-message {
+    color: #ff6b6b;
+    font-size: 0.85rem;
+    margin-top: -0.25rem;
+    margin-bottom: 0.5rem;
+}
+
+/* Download Button */
+.download-btn {
+    background: linear-gradient(135deg, rgba(84, 184, 255, 0.44), rgba(84, 184, 255, 0.44));
+    color: var(--text-color);
+    border: none;
+    border-radius: 25%;
+    width: 30px; /* Explicit size */
+    height: 30px; /* Explicit size */
+    cursor: pointer;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.download-btn:hover {
+    transform: scale(1.1);
+    box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+}
+
+.download-btn:active {
+    transform: scale(0.95);
+}
+
+/* Keyframe Animations */
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to   { opacity: 1; }
+}
+
+@keyframes slideIn {
+    from { transform: translateY(-30px); opacity: 0; }
+    to   { transform: translateY(0); opacity: 1; }
+}
+/* ===== BILLING PAGE LAYOUT ===== */
+/* src/pages/BillingPage.css
+   Dark-theme compatible version that preserves original styling.
+   Uses your global variables (e.g. --primary-color, --glass-bg, --border-color, --text-color).
+   Local fallbacks keep the original appearance when needed.
+*/
+
+/* Page-scoped variables mapped to global theme variables with fallbacks */
+.billing-page {
+    /* map global tokens, with fallbacks to original hard-coded colors */
+    --bp-primary: var(--primary-color, #4cafef);
+    --bp-primary-light: var(--primary-color-light, #e0f7ff);
+    --bp-background: var(--background-color, #f0f8ff);
+    --bp-glass: var(--glass-bg, rgba(240, 248, 255, 0.85));
+    --bp-border: var(--border-color, #ddd);
+    --bp-shadow: var(--shadow-color, rgba(0, 0, 0, 0.08));
+    --bp-text: var(--text-color, #333);
+    --bp-muted: rgba(0,0,0,0.45);
+    --bp-table-header: var(--modal-bg, #f4f4f4);
+    --bp-table-hover: var(--table-hover-bg, #f1f9ff);
+    --bp-out-of-stock-bg: #fce4e4;
+    --bp-out-of-stock-text: #999;
+    --bp-danger: #ef4444;
+    --bp-success: #28a745;
+    --bp-popup-bg: var(--modal-bg, #fff);
+    --bp-order-summary-bg: var(--bp-popup-bg, #fff); /* fallback used by invoice-summary */
+}
+
+/* ---------- Layout ---------- */
+.billing-layout {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 2rem;
+    margin-top: 2rem;
+    color: var(--bp-text);
+}
+
+/* Product list / modal list */
+.product-list ul, .customer-modal-list {
+    list-style: none;
+    max-height: 400px;
+    overflow-y: auto;
+    margin-top: 1rem;
+}
+
+/* Items in lists */
+.product-list li, .customer-modal-list li {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.75rem;
+    border-radius: 8px;
+    transition: background-color 0.2s ease;
+    color: var(--bp-text);
+}
+
+/* Hover state uses theme-aware light primary */
+.product-list li:hover, .customer-modal-list li:hover {
+    background-color: var(--bp-primary-light);
+    cursor: pointer;
+}
+
+/* Small circular add button */
+.product-list li button {
+    background: var(--bp-primary);
+    color: white;
+    border: none;
+    border-radius: 50%;
+    width: 24px;
+    height: 24px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    cursor: pointer;
+}
+
+/* small search style */
+.small-search {
+    font-size: 0.9rem;
+    padding: 0.5rem 1rem;
+}
+
+/* invoice customer selection divider */
+.invoice-details .customer-selection {
+    margin-bottom: 1.5rem;
+    padding-bottom: 1.5rem;
+    border-bottom: 1px solid var(--bp-border);
+}
+
+/* ---------- Table ---------- */
+.beautiful-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 0.5rem;
+}
+
+/* table cells */
+.beautiful-table th,
+.beautiful-table td {
+    padding: 8px 5px;
+    border: 1px solid var(--bp-border);
+    text-align: left;
+    color: var(--bp-text);
+}
+
+/* header row */
+.beautiful-table thead {
+    background-color: var(--primary-color-light);
+}
+
+/* alternate rows */
+.beautiful-table tr:nth-child(even) {
+    background-color: var(--bp-table-row-alt);
+}
+
+/* row hover */
+.beautiful-table tr:hover {
+    background-color: var(--bp-table-hover);
+}
+
+/* ========================
+   Light Theme Variables
+   ======================== */
+:root {
+    --bp-border: #ccc;
+    --bp-text: #333;
+    --bp-table-header: #f4f4f4;
+    --bp-table-row-alt: #fafafa;
+    --bp-table-hover: #f1f9ff;
+}
+
+/* ========================
+   Dark Theme Variables
+   ======================== */
+body.dark-theme {
+    --bp-border: #444;
+    --bp-text: #c9d1d9;
+    --bp-table-header: #161b22;  /* dark header */
+    --bp-table-row-alt: #1e1e1e; /* subtle zebra striping */
+    --bp-table-hover: #2a2a2a;   /* darker hover */
+}
+
+
+/* Out of stock */
+.out-of-stock {
+    color: var(--bp-out-of-stock-text);
+    background-color: var(--bp-out-of-stock-bg) !important;
+}
+
+/* small buttons */
+.small-btn {
+    padding: 0.3rem 0.6rem;
+    font-size: 0.85rem;
+}
+
+/* small buttons */
+.dark-theme .small-btn {
+    padding: 0.3rem 0.6rem;
+    font-size: 0.85rem;
+}
+
+/* ---------- Cart items ---------- */
+.cart-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.75rem;
+}
+
+/* remove icon inside cart item (text-like) */
+.cart-item .remove-btn {
+    background: none;
+    border: none;
+    color: var(--bp-danger);
+    cursor: pointer;
+}
+
+/* invoice summary separator */
+.invoice-summary {
+    margin-top: 1.5rem;
+    padding-top: 1.5rem;
+    border-top: 1px solid var(--bp-border);
+}
+
+/* invoice summary layout */
+.invoice-summary p {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 0.5rem;
+}
+
+/* invoice total heading uses primary color */
+.invoice-summary h4 {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 1rem;
+    color: var(--bp-primary);
+}
+
+/* ensure process button width and margin match previous */
+.process-payment-btn {
+    width: 100%;
+}
+
+/* ---------- Invoice card (big visual) ---------- */
+.invoice-details {
+    background: linear-gradient(135deg, var(--bp-popup-bg), var(--bp-background));
+    border-radius: 25px;
+    padding: 1.5rem;
+    box-shadow: 0 6px 18px var(--bp-shadow);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+/* subtle lift on hover */
+.invoice-details:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 10px 24px var(--bp-shadow);
+}
+
+/* title styling: keep same sizes but theme-aware color + border */
+.invoice-details h3 {
+    font-size: 1.6rem;
+    font-weight: 700;
+    margin-bottom: 1rem;
+    color: var(--bp-text);
+    text-align: center;
+    border-bottom: 2px solid var(--bp-border);
+    padding-bottom: 0.5rem;
+}
+
+/* ---------- Cart list ---------- */
+.cart-items {
+    margin-top: 1rem;
+    max-height: 800px;
+    overflow-y: auto;
+    padding-right: 0.5rem;
+}
+
+.cart-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.4rem 0;
+    border-bottom: 1px dashed var(--bp-border);
+    font-size: 0.95rem;
+}
+
+.cart-item:last-child {
+    border-bottom: none;
+}
+
+/* prominent remove button used elsewhere (small pill) */
+.remove-btn {
+    background: var(--bp-danger);
+    color: white;
+    border: none;
+    padding: 0.3rem 0.5rem;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.85rem;
+    transition: background 0.2s ease;
+}
+
+.remove-btn:hover {
+    background: #d9363e; /* keep strong contrast for hover - still okay in dark */
+}
+
+/* invoice summary card styling (inner) */
+.invoice-summary {
+    margin-top: 1rem;
+    background: var(--bp-order-summary-bg);
+    padding: 1rem;
+    border-radius: 8px;
+    font-size: 0.95rem;
+}
+
+/* ensure spacing for paragraph / headings */
+.invoice-summary p, .invoice-summary h4 {
+    display: flex;
+    justify-content: space-between;
+    margin: 0.4rem 0;
+}
+
+/* process payment button - primary color */
+.process-payment-btn {    padding: 0.75rem 1.5rem;
+    border-radius: 25px;
+    background: rgba(25, 180, 61, 0.55); /* faint glassy background */
+    border: 1px solid rgb(26, 255, 0); /* visible faint border */
+    backdrop-filter: blur(8px); /* frosted effect */
+    -webkit-backdrop-filter: blur(8px);
+    color: var(--text-color); /* darker readable text */
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.25s ease;
+    box-shadow: 0 4px 12px rgba(0, 50, 100, 0.25); /* darker shadow for light bg */
+
+}
+
+.process-payment-btn:hover {
+    /* slightly darker on hover; uses alpha overlay on primary */
+    background: linear-gradient(0deg, rgba(0, 128, 0, 0.53), rgba(0, 128, 0, 0.51)), rgba(0, 128, 0, 0.62);
+    color: white;
+}
+
+.preview-btn {    padding: 0.75rem 1.5rem;
+    border-radius: 25px;
+    background: rgb(193, 232, 226); /* faint glassy background */
+    border: 1px solid rgb(193, 232, 226); /* visible faint border */
+    backdrop-filter: blur(8px); /* frosted effect */
+    -webkit-backdrop-filter: blur(8px);
+    color: var(--text-color); /* darker readable text */
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.25s ease;
+    box-shadow: 0 4px 12px rgba(0, 50, 100, 0.25); /* darker shadow for light bg */
+
+}
+
+.preview-btn:hover {
+    /* slightly darker on hover; uses alpha overlay on primary */
+    background: linear-gradient(0deg, rgb(55, 123, 113), rgb(50, 91, 85)), rgb(134, 178, 171);
+    color: white;
+}
+
+/* ---------- Mini popup (small confirmations) ---------- */
+.mini-popup-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.3);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 2000;
+}
+
+.mini-popup {
+    background: var(--bp-popup-bg);
+    padding: 1rem 1.5rem;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    font-size: 0.95rem;
+    text-align: center;
+    max-width: 300px;
+    animation: scaleIn 0.25s ease;
+}
+
+.mini-popup button {
+    margin-top: 0.75rem;
+    background: var(--bp-primary);
+    color: white;
+    border: none;
+    padding: 0.4rem 0.8rem;
+    border-radius: 5px;
+    cursor: pointer;
+}
+
+/* scale animation */
+@keyframes scaleIn {
+    from { transform: scale(0.8); opacity: 0; }
+    to { transform: scale(1); opacity: 1; }
+}
+
+/* ---------- Success overlay / card ---------- */
+.success-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.7);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 3000;
+    animation: fadeIn 0.3s ease;
+}
+
+.success-card {
+    background: linear-gradient(135deg, var(--bp-popup-bg), #f8faff);
+    padding: 2rem;
+    border-radius: 16px;
+    width: 90%;
+    max-width: 420px;
+    text-align: center;
+    box-shadow: 0 8px 30px rgba(0,0,0,0.25);
+    animation: slideUp 0.3s ease;
+}
+
+.success-card h2 {
+    color: var(--bp-success);
+    font-size: 1.8rem;
+    margin-bottom: 1rem;
+}
+
+/* order summary box inside success */
+.order-summary {
+    background: var(--bp-order-summary-bg);
+    border-radius: 25px;
+    padding: 1rem;
+    margin: 1rem 0;
+    font-size: 1rem;
+    text-align: left;
+}
+
+.order-summary p {
+    margin: 0.4rem 0;
+}
+
+/* success card button */
+.success-card button {
+    background: var(--bp-primary);
+    color: white;
+    border: none;
+    padding: 0.6rem 1.2rem;
+    font-size: 1rem;
+    border-radius: 8px;
+    cursor: pointer;
+}
+
+/* fade & slide animations */
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+@keyframes slideUp {
+    from { transform: translateY(30px); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
+}
+
+/* ---------- Colored stat labels (kept original colors but use variables where possible) ---------- */
+.subtotal-actual {
+    color: #2c3e50;  /* kept original darker blue-gray for emphasis */
+    font-weight: 600;
+}
+
+
+
+.subtotal-selling {
+    color: #16a085;  /* teal green */
+    font-weight: 800;
+    padding-top: 5px;
+    font-size: 20px;
+}
+
+.dark-theme .subtotal-selling {
+    color: #1cffd1;  /* teal green */
+    font-weight: 800;
+    padding-top: 5px;
+    font-size: 20px;
+}
+
+.discount {
+    color: #e67e22;  /* orange */
+    font-weight: 600;
+}
+
+.dark-theme .discount {
+    color: #ffc793;  /* orange */
+    font-weight: 600;
+}
+
+.dark-theme .tax {
+    color: #ff432b;  /* red */
+    font-weight: 600;
+}
+
+.tax {
+    color: #c0392b;  /* red */
+    font-weight: 600;
+    font-size: 1rem;
+    padding-top: 0.5rem;
+}
+
+/* Payments stats - symmetrical cards (Dates | Total | Bars) */
+.payments-stats {
+    display: flex;
+    gap: 16px;
+    align-items: stretch; /* ensure children stretch to same height */
+    margin-top: 16px;
+    border-radius: 50%;
+    margin-bottom: 8px;
+    flex-wrap: wrap;
+}
+
+.stats-card {
+    flex: 1 1 0; /* make all three equal width */
+    min-width: 220px;
+    padding: 16px;
+
+    border-radius: 30px;
+    background: var(--glass-bg);
+    border: 1px solid var(--border-color);
+    box-shadow: 0 6px 18px var(--shadow-color);
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start; /* align content to top so stretched cards look consistent */
+    align-self: stretch; /* force each card to stretch to the tallest sibling (bars card) */
+}
+
+/* Ensure bars card defines the row height and its bars are vertically centered */
+.bars-card .payments-bars {
+    height: 100%;
+    display: flex;
+
+    flex-direction: column;
+    justify-content: center; /* center bars vertically within the card */
+    gap: 12px;
+}
+
+/* Center the date inputs vertically so they align with the other cards */
+.dates-card .time-range-selector-vertical {
+    height: 100%;
+    align-items: center;
+    justify-content: center;
+}
+
+/* Slightly increase padding so content breathes evenly */
+.stats-card { padding: 20px; }
+
+/* Dates column (stacked inputs) */
+.time-range-selector-vertical {
+    display: flex;
+    flex-direction: row; /* place inputs side-by-side on larger screens */
+    gap: 10px;
+    align-items: center;
+}
+.time-range-selector-vertical label {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    font-size: 13px;
+    color: var(--text-color);
+    min-width: 0;
+}
+
+.date-input {
+    padding: 8px;
+    border-radius: 8px;
+    border: 1px solid var(--input-border);
+    background: var(--input-bg);
+    color: var(--text-color);
+    outline: none;
+    min-width: 0;
+    width: 100%;
+}
+
+/* ensure each label/input group can shrink properly */
+.dates-card .time-range-selector-vertical > label {
+    flex: 1 1 0;
+}
+
+/* Total card */
+.total-amount {
+    font-size: 24px;
+    font-weight: 700;
+    color: var(--text-color);
+}
+.total-sub {
+    font-size: 12px;
+    color: var(--text-color);
+    margin-top: 8px;
+}
+
+/* Bars column */
+.payments-bars {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+.mode-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+.mode-label {
+    width: 100px;
+    font-size: 13px;
+    color: var(--text-color);
+}
+.mode-bar-wrapper {
+    flex: 1 1 0;
+    max-width: 220px; /* narrower wrapper */
+    background: rgba(0,0,0,0.06);
+    height: 20px; /* slightly taller for visibility */
+    border-radius: 10px;
+    overflow: hidden;
+}
+.mode-bar-inner {
+    height: 100%;
+    border-radius: 10px;
+    transition: width 0.5s ease;
+}
+.mode-count {
+    min-width: 40px;
+    text-align: right;
+    font-size: 13px;
+    color: var(--text-color);
+}
+
+.no-data {
+    color: var(--text-color);
+}
+
+/* Responsive: stack the three cards on small screens and stack date inputs vertically */
+@media (max-width: 900px) {
+    .payments-stats {
+        flex-direction: column;
+    }
+    .time-range-selector-vertical {
+        flex-direction: column; /* stack date inputs on small screens */
+        gap: 8px;
+    }
+    .billing-layout {
+        grid-template-columns: 1fr;
+    }
+}
+.actions-toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    width: 100%;
+}
+
+.actions-group-left {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+}
+
+.columns-dropdown-container {
+    position: relative;
+}
+
+.columns-dropdown-menu {
+    position: absolute;
+    right: 0;
+    top: calc(100% + 8px);
+    background: #fff;
+    border: 1px solid #e6e6e6;
+    border-radius: 8px;
+    box-shadow: 0 8px 30px rgba(0,0,0,0.12);
+    padding: 10px;
+    z-index: 1000;
+    min-width: 220px;
+}
+
+.columns-list {
+    max-height: 250px;
+    overflow-y: auto;
+    margin-bottom: 8px;
+}
+
+.column-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 6px;
+    border-radius: 6px;
+    cursor: pointer;
+    user-select: none;
+    font-size: 14px;
+}
+.column-item:hover {
+    background-color: #f5f5f5;
+}
+.column-item input {
+    width: 16px;
+    height: 16px;
+    accent-color: var(--primary-color);
+}
+
+.columns-dropdown-footer {
+    display: flex;
+    justify-content: space-between;
+    padding-top: 8px;
+    border-top: 1px solid #eee;
+}
+
+.pagination-container {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1rem 0;
+    flex-wrap: wrap;
+    gap: 1rem;
+}
+
+.pagination-info {
+    font-size: 0.9rem;
+    color: #555;
+}
+
+.pagination-controls {
+    display: flex;
+    gap: 5px;
+}
+
+.pagination-controls button {
+    padding: 6px 12px;
+    border: 1px solid #ddd;
+    background-color: #fff;
+    cursor: pointer;
+    border-radius: 4px;
+    transition: background-color 0.2s;
+}
+
+.pagination-controls button:hover:not(:disabled) {
+    background-color: #f5f5f5;
+}
+
+.pagination-controls button:disabled {
+    cursor: not-allowed;
+    color: #aaa;
+}
+
+.pagination-controls button.active {
+    background-color: var(--primary-color);
+    color: white;
+    border-color: var(--primary-color);
+}
+
+.action-icons {
+    display: flex;
+    gap: 8px;
+}
+
+.action-icon {
+    cursor: pointer;
+    border-radius: 6px;
+    padding: 6px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transition: background-color 0.2s;
+}
+.action-icon.edit { background-color: var(--selected-green); color: var(--text-color); }
+.action-icon.edit:hover { background-color: #b2ebf2; }
+.action-icon.delete { background-color: var(--selected-red); color:var(--text-color); }
+.action-icon.delete:hover { background-color: #ffcdd2; }
+.ribbonw {
+    width: 150px;
+    height: 60px;
+    background: #007bff;
+    position: absolute;
+    top: 15px;
+    left: 0px;
+    border-radius: 25%;
+    text-align: center;
+    line-height: 30px;
+    letter-spacing: 1px;
+    color: #fff;
+    font-size: 14px;
+    font-weight: bold;
+    transform: rotate(-1deg);
+    box-shadow: 0 3px 6px rgba(0,0,0,0.2);
+}
+
+.ribbonw span {
+    display: block;
+    padding: 0 10px;
+    border-radius: 25%;
+}
+.google-login-container {
+    margin-top: 1.5rem;
+    display: flex;
+    justify-content: center; /* This centers the button horizontally */
+}
+
+/* This targets the button element rendered by the GoogleLogin component */
+.google-login-container > div {
+    border-radius: 50px !important; /* Adjust the 20px value as you like! */
+}
+
+
+
+
+/* Hide the default checkbox */
+.styled-checkbox {
+    appearance: none;
+    -webkit-appearance: none;
+    width: 18px;
+    height: 18px;
+    border: 2px solid var(--primary-color);
+    border-radius: 4px;
+    display: inline-block;
+    position: relative;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    background-color: white;
+}
+
+/* Checkbox when checked */
+.styled-checkbox:checked {
+    background-color: var(--primary-color);
+    border-color: var(--primary-color);
+}
+
+/* Checkmark icon */
+.styled-checkbox:checked::after {
+    content: '✔';
+    color: white;
+    position: absolute;
+    top: -1px;
+    left: 3px;
+    font-size: 13px;
+    font-weight: bold;
+}
+
+/* Hover effect */
+.styled-checkbox:hover {
+    box-shadow: 0 0 4px rgba(0, 0, 0, 0.2);
+}
+.row-selected {
+    background-color: #e0f7ff !important; /* A light blue to show selection */
+}
+
+.search-result-item:hover {
+    background-color: var(--primary-color-light, #e0f7ff); /* Uses your theme color or a light blue fallback */
+}
+.qty-control { display: flex; align-items: center; gap: 8px; justify-content: center; }
+.qty-arrows { display: flex; flex-direction: column; }
+.qty-arrow-btn {
+    border: none; background: transparent; cursor: pointer; color: var(--text-color);
+    line-height: 0.5; font-size: 10px; padding: 2px 4px; border-radius: 4px;
+}
+.qty-arrow-btn:hover { background-color: var(--border-color); }
+
+/* index.css or global CSS */
+
+.shortcut-key {
+    display: inline-block;
+    padding: 3px 6px;
+    font-family: monospace; /* Use a monospaced font */
+    font-size: 0.8em;
+    font-weight: bold;
+    line-height: 1;
+    color: var(--text-color);
+    background-color: var(--background-color); /* Slightly different background */
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    box-shadow: 0 1px 1px rgba(0, 0, 0, 0.1);
+    white-space: nowrap;
+}
+
+/* Optional: Dark theme adjustments if needed */
+body.dark-theme .shortcut-key {
+    background-color: var(--input-bg); /* Use input background in dark mode */
+    border-color: #555; /* Darker border */
+    color: var(--text-color);
+}
+
+/* --- CSS for Info Tooltip --- */
+.info-tooltip-container {
+    position: relative;
+    display: inline-block;
+}
+
+.info-tooltip-container .info-tooltip-text {
+    visibility: hidden;
+    width: 350px;
+    background-color: #333;
+    color: #fff;
+    text-align: left;
+    border-radius: 6px;
+    padding: 10px;
+    position: absolute;
+    z-index: 10;
+    bottom: 125%; /* Position above the icon */
+    left: 50%;
+    margin-left: -175px; /* Use half of the width to center */
+    opacity: 0;
+    transition: opacity 0.3s;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+    font-size: 0.9rem;
+    font-weight: normal;
+    line-height: 1.5;
+}
+
+/* Arrow */
+.info-tooltip-container .info-tooltip-text::after {
+    content: "";
+    position: absolute;
+    top: 100%; /* At the bottom of the tooltip */
+    left: 50%;
+    margin-left: -5px;
+    border-width: 5px;
+    border-style: solid;
+    border-color: #333 transparent transparent transparent;
+}
+
+.info-tooltip-container:hover .info-tooltip-text {
+    visibility: visible;
+    opacity: 1;
+}
+
+/* Add to your App.css or a new Premium.css file */
+
+.premium-block-wrapper {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 40px;
+    background-color: var(--background-color); /* Or your app's bg color */
+    border: 2px dashed var(--border-color); /* Or your border color */
+    border-radius: 8px;
+    text-align: center;
+    margin: 20px;
+}
+
+.premium-block-icon {
+    margin-bottom: 16px;
+}
+
+.premium-block-wrapper h3 {
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: #f59e0b; /* Gold color for premium */
+    margin: 0 0 8px 0;
+}
+
+.premium-block-wrapper p {
+    font-size: 0.9rem;
+    color: var(--text-color);
+    margin: 0 0 16px 0;
+}
+
+.premium-block-wrapper .upgrade-button {
+    background-color: var(--glass-bg); /* Your app's theme color */
+    color: white;
+    border: none;
+    border-radius: 5px;
+    padding: 10px 20px;
+    font-weight: 600;
+    cursor: pointer;
+}

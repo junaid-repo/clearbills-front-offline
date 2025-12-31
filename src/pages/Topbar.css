@@ -1,0 +1,243 @@
+
+/* src/components/Topbar.css */
+
+/* Container for the buttons */
+.topbar-buttons-container {
+    display: flex;
+    align-items: center;
+    gap: 1.0rem;
+    padding: 0.4rem 1.2rem;
+    margin-top: 0rem;
+    border-radius: 26px;
+    background: var(--glass-card-bg); /* Use your theme variable */
+    backdrop-filter: blur(10px);
+    border: 1px solid var(--border-color); /* Use your theme variable */
+}
+
+/* General style for icon wrappers */
+.topbar-icon-wrapper {
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 18px;
+    padding: 8px;
+    background: var(--primary-color-light); /* Use your theme variable */
+    transition: all 0.25s ease;
+    /* Removed inline transform, apply hover effects via CSS if preferred */
+}
+.topbar-icon-wrapper:hover {
+    transform: translateY(-5px);
+    opacity: 0.8;
+}
+
+
+/* Notification Badge */
+.notification-badge {
+    position: absolute;
+    top: 5px;
+    right: 7px;
+    background: #e80a0d;
+    color: #fff;
+    border-radius: 50%;
+    font-size: 0.65rem;
+    width: 16px;
+    height: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+}
+
+/* Notification Dropdown */
+.notification-dropdown {
+    position: absolute;
+    top: 50px; /* Adjust as needed */
+    right: 0;
+    min-width: 320px;
+    background: var(--modal-bg); /* Use theme variable */
+    border: 1px solid var(--border-color); /* Use theme variable */
+    border-radius: 18px;
+    box-shadow: 0 12px 24px rgba(0, 0, 0, 0.2), 0 8px 16px rgba(0, 0, 0, 0.15);
+    z-index: 100;
+    padding: 0.5rem 0;
+    animation: fadeInDropdown 0.2s ease-out; /* Add animation */
+}
+
+.notification-dropdown-header {
+    padding: 0.5rem 1rem;
+    font-weight: 600;
+    color: var(--primary-color); /* Use theme variable */
+    border-bottom: 1px solid var(--border-color-light); /* Lighter border */
+}
+
+.notification-dropdown-empty {
+    padding: 0.75rem 1rem;
+    color: var(--text-color-secondary); /* Use theme variable */
+}
+
+.notification-dropdown-item {
+    padding: 0.75rem 1rem; /* Increased padding */
+    border-bottom: 1px solid var(--border-color-light); /* Lighter border */
+    cursor: pointer;
+    transition: background-color 0.15s ease;
+}
+.notification-dropdown-item:last-child {
+    border-bottom: none;
+}
+
+.notification-dropdown-item:hover {
+    background-color: var(--hover-bg-color); /* Add a theme variable for hover */
+}
+
+.notification-dropdown-item.unread {
+    background: var(--primary-color-lighter); /* Use theme variable */
+    font-weight: 600;
+}
+.notification-dropdown-item.unread:hover {
+    background-color: var(--primary-color-light); /* Slightly darker hover for unread */
+}
+
+.notification-title {
+    font-size: 1rem;
+    font-weight: bold;
+    color: var(--text-color); /* Use theme variable */
+}
+
+.notification-subject {
+    font-size: 0.9rem;
+    opacity: 0.8;
+    color: var(--text-color-secondary); /* Use theme variable */
+}
+
+.notification-time {
+    font-size: 0.8rem;
+    color: var(--text-color-secondary); /* Use theme variable */
+    margin-top: 2px;
+    text-align: right; /* Align time to the right */
+}
+
+.notification-dropdown-actions {
+    display: flex;
+    justify-content: flex-end;
+    padding: 0.5rem 1rem;
+    border-top: 1px solid var(--border-color-light); /* Lighter border */
+}
+
+.btn-clear-notif {
+    /* Style your clear button */
+    font-size: 0.9rem;
+    padding: 0.4rem 1rem;
+    background: transparent;
+    border: 1px solid var(--border-color);
+    color: var(--text-color-secondary);
+    border-radius: 8px;
+    cursor: pointer;
+}
+.btn-clear-notif:hover {
+    background: var(--hover-bg-color);
+}
+
+
+/* User Profile Trigger */
+.user-profile-trigger {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    cursor: pointer;
+    padding: 6px 12px 6px 6px;
+    border-radius: 999px; /* Pill shape */
+    background: var(--primary-color-light); /* Use theme variable */
+    border: 1px solid var(--border-color-light); /* Lighter border */
+    transition: all 0.25s ease;
+    /* Removed inline transform */
+}
+.user-profile-trigger:hover {
+    transform: translateY(-5px); /* Apply hover effect */
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+}
+
+
+.user-profile-pic {
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 2px solid var(--primary-color); /* Add border */
+}
+
+.user-profile-name {
+    font-weight: 600;
+    font-size: 1rem;
+    color: var(--text-color); /* Use theme variable */
+}
+
+
+/* User Dropdown */
+.user-dropdown {
+    position: absolute;
+    top: calc(100% + 5px); /* Position below the trigger */
+    right: 0;
+    min-width: 220px; /* Adjust width as needed */
+    background: var(--modal-bg); /* Use theme variable */
+    border: 1px solid var(--border-color); /* Use theme variable */
+    border-radius: 12px; /* Consistent radius */
+    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.15);
+    z-index: 100;
+    padding: 0.5rem 0; /* Vertical padding */
+    animation: fadeInDropdown 0.2s ease-out; /* Add animation */
+}
+
+.user-dropdown-item {
+    display: flex;
+    align-items: center;
+    gap: 12px; /* Space between icon and text */
+    padding: 10px 15px; /* Padding for items */
+    cursor: pointer;
+    font-size: 1rem;
+    color: var(--text-color); /* Use theme variable */
+    transition: background-color 0.15s ease;
+}
+
+.user-dropdown-item:hover {
+    background-color: var(--hover-bg-color); /* Use theme variable */
+}
+
+.user-dropdown-item svg {
+    color: var(--primary-color); /* Color for icons */
+    flex-shrink: 0; /* Prevent icon shrinking */
+}
+
+.user-dropdown-item.logout svg {
+    color: #e80a0d; /* Specific color for logout icon */
+}
+.user-dropdown-item.logout span {
+    color: #e80a0d; /* Specific color for logout text */
+    font-weight: 500;
+}
+.user-dropdown-item.logout:hover {
+    background-color: rgba(232, 10, 13, 0.1); /* Light red hover for logout */
+}
+
+
+/* Redundant Logout Button Wrapper (if you keep it) */
+.logout-button-wrapper {
+    background: rgba(232, 10, 13, 0.1);
+    border: 1px solid rgba(232, 10, 13, 0.2);
+}
+.logout-button-wrapper:hover {
+    background: rgba(232, 10, 13, 0.2);
+}
+
+
+/* Dropdown Animation */
+@keyframes fadeInDropdown {
+    from {
+        opacity: 0;
+        transform: translateY(-5px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}

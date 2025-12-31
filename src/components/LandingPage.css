@@ -1,0 +1,377 @@
+/* Add smooth scrolling for hash links */
+html {
+    scroll-behavior: smooth;
+}
+
+.landing-page {
+    background-color: var(--background-color);
+    color: var(--text-color);
+}
+
+/* 1. Header */
+.landing-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1rem 2rem;
+    background: var(--glass-bg, rgba(255, 255, 255, 0.8));
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border-bottom: 1px solid var(--border-color, #ddd);
+
+    /* Sticky Topbar */
+    position: sticky;
+    top: 0;
+    z-index: 1000;
+}
+
+.landing-header .logo {
+    font-size: 1.8rem;
+    font-weight: bold;
+    color: var(--primary-color, #00aaff);
+}
+
+.landing-nav a {
+    margin: 0 1rem;
+    text-decoration: none;
+    color: var(--text-color, #333);
+    font-weight: 500;
+    transition: color 0.2s ease;
+}
+
+.landing-nav a:hover {
+    color: var(--primary-color, #00aaff);
+}
+
+.auth-buttons .btn {
+    margin-left: 0.5rem;
+}
+
+/* Modify default .btn for secondary look */
+.auth-buttons .btn-secondary {
+    background: transparent;
+    border-color: var(--primary-color, #00aaff);
+    color: var(--primary-color, #00aaff);
+}
+
+.auth-buttons .btn-secondary:hover {
+    background: var(--primary-color-light, #e0f7ff);
+    color: var(--primary-color, #00aaff);
+}
+
+/* --- Global Section Styles --- */
+.landing-section {
+    /* Add padding to offset the sticky header */
+    padding: 4rem 2rem;
+    max-width: 1200px;
+    margin: 2rem auto;
+}
+
+/* Give sections (except carousel) a consistent glass card feel */
+.landing-section.glass-card {
+    background: var(--glass-bg, rgba(255, 255, 255, 0.8));
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border-radius: 30px;
+    border: 2px solid var(--border-color, #e0f7ff);
+    box-shadow: 0 4px 20px var(--shadow-color, rgba(0,0,0,0.15));
+}
+
+/* --- MODIFIED: Carousel Wrapper --- */
+/* First section (carousel) */
+#home {
+    padding: 0; /* Carousel handles its own padding */
+    max-width: 80%; /* <-- Set max-width to 80% */
+    margin: 2rem auto 0 auto;  /* <-- Center it and add top margin */
+
+    /* Added to match other cards */
+    border-radius: 30px;
+    overflow: hidden;
+
+}
+
+.section-title {
+    text-align: center;
+    font-size: 2.5rem;
+    color: var(--text-color);
+    margin-bottom: 2.5rem;
+}
+
+/* 2. Carousel */
+.main-carousel .slide-content {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 2rem 5%;
+    background: var(--background-color, #f0f8ff);
+    /* MODIFIED: Reduce overall min-height of the slide content to reflect smaller images */
+    min-height: 250px; /* Reduced from 500px by 50% */
+}
+
+.main-carousel .slide-text {
+    flex: 0.3;
+    text-align: left;
+    padding: 1rem;
+    color: var(--text-color);
+}
+
+.main-carousel .slide-text h2 {
+    font-size: 2.8rem;
+    margin-bottom: 1rem;
+}
+
+.main-carousel .slide-text p {
+    font-size: 1.2rem;
+    margin-bottom: 2rem;
+}
+
+.main-carousel .slide-image {
+    flex: 0.7;
+    padding: 1rem;
+    /* NEW: Define a fixed container size for the image to ensure evenness */
+    width: 850px; /* Example fixed width, adjust as needed. This will be 50% of 500px, assuming an original full image was around 500px wide based on min-height */
+    height: 650px; /* Example fixed height, keeping aspect ratio for now */
+    display: flex; /* Use flex to center the image within this container */
+    align-items: center;
+    justify-content: center;
+}
+
+/* --- MODIFIED: Carousel Image Size --- */
+.main-carousel .slide-image img {
+    /* MODIFIED: Set image width and height to 50% of its container, then ensure aspect ratio */
+    width: 100%; /* Image fills its *new* fixed-size container */
+    height: 100%; /* Image fills its *new* fixed-size container */
+    object-fit: contain; /* Ensures the whole image is visible within the bounds */
+    border-radius: 15px;
+    margin: 0 auto; /* No longer needed if using flex on parent, but harmless */
+
+}
+
+/* Style carousel dots */
+.main-carousel .control-dots .dot {
+    background: var(--primary-color, #00aaff) !important;
+    box-shadow: none !important;
+    opacity: 0.5 !important;
+}
+.main-carousel .control-dots .dot.selected {
+    opacity: 1 !important;
+}
+
+/* 3. Features Grid */
+.features-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 2rem 13rem;
+}
+
+.features-grid ul {
+    list-style: none;
+}
+
+.features-grid li {
+    font-size: 1.1rem;
+    margin-bottom: 1rem;
+    display: flex;
+    align-items: center;
+}
+
+.features-grid li .fa-check-circle {
+    color: #28a745;
+    margin-right: 0.75rem;
+    font-size: 1.2rem;
+}
+
+/* 4. Demo Video */
+.video-container {
+    position: relative;
+    width: 100%;
+    overflow: hidden;
+    padding-top: 56.25%; /* 16:9 Aspect Ratio */
+    border-radius: 15px;
+    box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+}
+
+.video-container iframe {
+    position: absolute;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    right: 0;
+    width: 100%;
+    height: 100%;
+    border: none;
+}
+
+/* 5. Why Choose Us */
+.why-us-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 2rem;
+    text-align: center;
+}
+
+.why-us-item i {
+    font-size: 4rem;
+    margin-bottom: 1.5rem;
+    color: var(--primary-color, #00aaff);
+    --fa-primary-color: var(--primary-color, #00aaff);
+    --fa-secondary-color: #9f9fc4;
+    --fa-secondary-opacity: 1.0;
+}
+
+.why-us-item h3 {
+    font-size: 1.5rem;
+    margin-bottom: 0.5rem;
+}
+
+/* 6. Contact Us */
+.contact-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 3rem;
+}
+
+.contact-form .form-group {
+    margin-bottom: 1.25rem;
+}
+
+.contact-form label {
+    display: block;
+    margin-bottom: 0.5rem;
+    font-weight: 600;
+}
+
+.contact-form input,
+.contact-form textarea {
+    width: 100%;
+    padding: 0.75rem;
+    border: 1px solid var(--input-border, #ddd);
+    background-color: var(--input-bg, #fff);
+    color: var(--text-color);
+    border-radius: 8px;
+    font-size: 1rem;
+    font-family: inherit;
+}
+
+.contact-form .input-error {
+    border-color: var(--error-color, #c80b0b);
+    background-color: var(--error-bg, rgba(207, 50, 50, 0.1));
+}
+
+.contact-form .error-message {
+    color: var(--error-message, #ff6b6b);
+    font-size: 0.9rem;
+    margin-top: 0.25rem;
+}
+
+.contact-form .btn {
+    width: 100%;
+    font-size: 1.1rem;
+}
+
+.contact-info-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 2rem;
+}
+
+.contact-info-item {
+    background: var(--background-color, #f0f8ff);
+    padding: 1.5rem;
+    border-radius: 15px;
+    text-align: center;
+    box-shadow: 0 4px 10px var(--shadow-color, rgba(0,0,0,0.1));
+}
+
+.contact-info-item i {
+    font-size: 2.5rem;
+    color: var(--primary-color, #00aaff);
+    margin-bottom: 1rem;
+}
+
+.contact-info-item h4 {
+    font-size: 1.2rem;
+    margin-bottom: 0.5rem;
+}
+
+.contact-info-item p {
+    font-size: 0.95rem;
+    color: var(--text-color);
+}
+
+/* --- Responsive Design --- */
+
+@media (max-width: 992px) {
+    .landing-header {
+        padding: 1rem;
+    }
+    .landing-nav {
+        display: none; /* Simple responsive fix: hide nav on medium screens */
+        /* A better fix would be a hamburger menu */
+    }
+    .landing-section {
+        padding: 3rem 1.5rem;
+    }
+
+    /* --- ADDED: Responsive Carousel Wrapper --- */
+    #home {
+        max-width: 95%;
+        margin-top: 1rem;
+    }
+    /* --- END ADDED --- */
+
+    .features-grid,
+    .contact-grid {
+        grid-template-columns: 1fr;
+    }
+    .why-us-grid {
+        grid-template-columns: 1fr 1fr;
+    }
+    .main-carousel .slide-content {
+        flex-direction: column;
+        padding: 2rem 1rem;
+        /* MODIFIED: Reduce min-height for mobile */
+        min-height: 200px; /* Adjusted for smaller images */
+    }
+    .main-carousel .slide-text {
+        flex: 1;
+        text-align: center;
+    }
+    .main-carousel .slide-image {
+        flex: 1;
+        /* MODIFIED: Adjust fixed size for mobile */
+        width: 200px; /* Smaller fixed width for mobile */
+        height: 200px; /* Smaller fixed height for mobile */
+        margin-top: 2rem;
+    }
+
+    /* --- ADDED: Responsive Image --- */
+    .main-carousel .slide-image img {
+        width: 100%; /* Image fills its *new* fixed-size container */
+        height: 100%; /* Image fills its *new* fixed-size container */
+        object-fit: contain; /* Ensures the whole image is visible within the bounds */
+    }
+    /* --- END ADDED --- */
+}
+
+@media (max-width: 576px) {
+    .auth-buttons .btn-secondary {
+        display: none; /* Hide login, just show register */
+    }
+    .landing-header .logo {
+        font-size: 1.5rem;
+    }
+    .section-title {
+        font-size: 2rem;
+    }
+    .why-us-grid,
+    .contact-info-grid {
+        grid-template-columns: 1fr;
+    }
+    .main-carousel .slide-text h2 {
+        font-size: 2rem;
+    }
+    .main-carousel .slide-text p {
+        font-size: 1rem;
+    }
+}

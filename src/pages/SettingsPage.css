@@ -1,0 +1,287 @@
+/* src/pages/SettingsPage.css */
+
+.settings-page .glass-card {
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 1.5rem 2rem;
+
+}
+
+/* --- NEW: Tab Navigation --- */
+.settings-tab-nav {
+    display: flex;
+    /* This border separates the tabs from the content */
+    border-bottom: 0px solid var(--border-color);
+    margin-bottom: 0; /* Removed margin */
+}
+
+.settings-tab-nav button {
+    padding: 10px 35px;
+    border: 0px solid transparent;
+    /* --- Request 3: Unselected tab color --- */
+    background: var(--primary-color-light); /* Greyish background */
+    border-top-color: var(--primary-color);
+    border-left-color: var(--primary-color);
+    border-right-color: var(--primary-color);
+    cursor: pointer;
+    font-size: 1.25rem;
+    font-weight: 500;
+    color: var(--text-color-secondary);
+    display: flex;
+    align-items: start;
+    gap: 8px;
+    border-radius: 8px 8px 0 0;
+    transition: all 0.2s ease-in-out;
+    /* --- Request 4: Add bottom border to unselected tabs --- */
+    border-bottom: 0px solid var(--border-color);
+}
+
+.settings-tab-nav button:hover {
+    background: var(--glass-bg-nav-end); /* Slightly different grey */
+    color: var(--text-color);
+}
+
+.settings-tab-nav button.active {
+    /* --- Request 3: Active tab color (matches content pane) --- */
+
+    color: var(--primary-color);
+    background: var(--glass-bg);
+    font-weight: 600;
+    border: 3px solid var(--border-color);
+    border-bottom: 0px solid transparent;
+    /* --- Request 4: Remove bottom border to blend --- */
+
+    border-top-color: var(--border-color);
+    border-left-color: var(--border-color);
+    border-right-color: var(--border-color);
+    margin-bottom: -1px; /* Pulls tab over the nav's bottom border */
+}
+
+/* --- NEW: Tab Content Pane --- */
+.tab-pane {
+    /* --- Request 3: Content pane color (matches active tab) --- */
+    background: var(--glass-bg);
+    /* --- Request 4: Remove top border to blend --- */
+    border: 3px solid var(--border-color);
+    border-radius: 0 0 12px 12px; /* Rounded bottom corners */
+    border-top: none;
+    padding: 1rem; /* Add some internal padding */
+    animation: fadeIn 0.3s ease; /* Simple fade-in */
+}
+
+/* Animation for tab content */
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(5px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+
+/* --- Section Header (REMOVED) --- */
+.section-header2 {
+    display: none; /* --- Request 2: Hide section headers --- */
+}
+
+/* --- Row & Item Styling (NO CHANGE) --- */
+.setting-row,
+.setting-item {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 20px;
+    border-bottom: 1px solid var(--border-color-light);
+    gap: 10px;
+}
+
+.tab-pane .setting-item:last-child,
+.tab-pane .setting-row:last-child {
+    border-bottom: none;
+}
+
+.setting-item label,
+.setting-toggle label:not(.switch) {
+    font-size: 0.95rem;
+    color: var(--text-color);
+    flex: 1;
+    margin-left: 10px;
+}
+
+.setting-toggle {
+    display: flex;
+    align-items: center;
+    flex-basis: 100%;
+}
+
+/* --- Input Styling (NO CHANGE) --- */
+.input-group {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.input-group span {
+    font-size: 0.9rem;
+    color: var(--text-color-secondary);
+}
+
+.small-input,
+.input-group input[type="number"] {
+    border-radius: 8px;
+    width: 70px;
+    padding: 6px 10px;
+    font-size: 0.95rem;
+    text-align: right;
+    border: 1px solid var(--border-color);
+    background: var(--input-bg);
+    color: var(--text-color);
+}
+
+.indented-controls {
+    flex-basis: 100%;
+    margin-left: 48px;
+    margin-top: 10px;
+    padding-top: 10px;
+    border-top: 1px dashed var(--border-color-light);
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.indented-controls label {
+    font-size: 0.9rem;
+    color: var(--text-color-secondary);
+    margin-left: 0;
+}
+
+.save-button-container {
+    padding: 12px 20px;
+    text-align: right;
+    background: var(--glass-bg-nav-start);
+}
+
+/* --- Toggle Switch Styling (NO CHANGE) --- */
+.switch {
+    position: relative;
+    display: inline-block;
+    width: 44px;
+    height: 24px;
+    flex-shrink: 0;
+}
+
+.switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+.slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    width: 44px;
+    background-color: #ccc;
+    -webkit-transition: .4s;
+    transition: .4s;
+}
+
+.slider:before {
+    position: absolute;
+    content: "";
+    height: 18px;
+    width: 18px;
+    left: 3px;
+    bottom: 3px;
+    background-color: white;
+    -webkit-transition: .4s;
+    transition: .4s;
+}
+
+input:checked + .slider {
+    background-color: var(--primary-color);
+}
+
+input:focus + .slider {
+    box-shadow: 0 0 1px var(--primary-color);
+}
+
+input:checked + .slider:before {
+    -webkit-transform: translateX(20px);
+    -ms-transform: translateX(20px);
+    transform: translateX(20px);
+}
+
+.slider.round {
+    border-radius: 24px;
+}
+
+.slider.round:before {
+    border-radius: 50%;
+}
+/* Style for the ACTIVE tab button */
+.tab-btn.active {
+    /* Background matches the content pane */
+    background: var(--primary-color-light);
+    /* Primary color for text and icon */
+    color: var(--primary-color);
+    font-weight: 600;
+    /* Borders match the content pane sides */
+    border: 1px solid var(--primary-color);
+    /* Remove bottom border to blend */
+    border-bottom-color: transparent;
+    /* Pull tab down slightly to cover nav border */
+    margin-bottom: -1px;
+}
+
+/* Optional: Style for inactive tabs (using the base class) */
+.tab-btn {
+    padding: 10px 20px;
+    border: 1px solid transparent;
+    /* Greyish background for inactive */
+    background: var(--glass-bg-nav-start);
+    cursor: pointer;
+    font-size: 0.95rem;
+    font-weight: 500;
+    /* Greyish text for inactive */
+    color: var(--text-color-secondary);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    border-radius: 8px 8px 0 0;
+    transition: all 0.2s ease-in-out;
+    /* Ensure inactive tabs have bottom border */
+    border-bottom: 1px solid var(--border-color);
+}
+
+.tab-btn:hover:not(.active) { /* Style hover only for inactive tabs */
+    background: var(--primary-color-light);
+    color: var(--text-color);
+}
+
+
+
+
+
+
+.setting-section-header {
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: #555;
+
+    letter-spacing: 0.5px;
+    margin-top: 1.75rem;
+margin-bottom: 0.75rem;
+padding: 8px 12px;
+border-radius: 5px;
+
+text-align: right;
+
+background: linear-gradient(to left, #f5f5f5, #ffffff);
+border-bottom: 1px solid #eee;
+}
+
+
+   .tab-pane > .setting-section-header:first-child {
+       margin-top: 0;
+   }
