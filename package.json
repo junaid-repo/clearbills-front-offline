@@ -24,6 +24,7 @@
     "@testing-library/user-event": "^13.5.0",
     "axios": "^1.11.0",
     "chart.js": "^4.5.0",
+    "html5-qrcode": "^2.3.8",
     "is-electron": "^2.2.2",
     "jwt-decode": "^4.0.0",
     "lucide-react": "^0.544.0",
@@ -73,31 +74,27 @@
     "electron-builder": "^26.0.12",
     "wait-on": "^9.0.3"
   },
-
   "build": {
-  "appId": "com.yourname.billingapp",
-  "productName": "My Billing App",
-  "files": [
-    "build/**/*",
-    "public/electron.js"
-  ],
-  "extraResources": [
-    {
-      "from": "../ShopAppBackEnd/shop/target/shop-0.0.3-USER_SPECIFIC.jar",
-      "to": "billing-app.jar"
+    "appId": "com.yourname.billingapp",
+    "productName": "My Billing App",
+    "files": [
+      "build/**/*",
+      "public/electron.js"
+    ],
+    "extraResources": [
+      {
+        "from": "../ShopAppBackEnd/shop/target/shop-0.0.3-USER_SPECIFIC.jar",
+        "to": "billing-app.jar"
+      }
+    ],
+    "win": {
+      "target": "nsis",
+      "icon": "public/icon.ico"
+    },
+    "linux": {
+      "target": "deb",
+      "icon": "public/icon.png",
+      "category": "Office"
     }
-  ],
-  "win": {
-    "target": "nsis",
-    "icon": "public/icon.ico"
-  },
-  "linux": {
-    "target": "deb",
-    "icon": "public/icon.png",
-    "category": "Office"
   }
-}
-
-
-
 }

@@ -256,13 +256,20 @@ const BillingPage = ({ setSelectedPage }) => {
     };
 
     // 1. Stop Scanner
+    // 1. Stop Scanner
     const stopScanner = () => {
         if (scannerRef.current) {
             scannerRef.current.stop().then(() => {
-                scannerRef.current.clear();
+                // Try to clear the UI inside the div
+                try { scannerRef.current.clear(); } catch (e) { console.warn(e); }
+
+                // CRITICAL FIX: Reset the ref to null so a new instance is created next time
+                scannerRef.current = null;
                 setIsScannerOpen(false);
             }).catch(err => {
                 console.error("Failed to stop scanner", err);
+                // Even if it fails, we must force close and reset
+                scannerRef.current = null;
                 setIsScannerOpen(false);
             });
         } else {
@@ -311,26 +318,47 @@ const BillingPage = ({ setSelectedPage }) => {
     };
 
     // 3. Start Scanner Helper
+    // 3. Start Scanner Helper
     const startScannerInternal = (cameraId) => {
+        // Double check that the element exists before initializing
+        if (!document.getElementById("reader")) {
+            console.error("Scanner element 'reader' not found in DOM");
+            return;
+        }
+
+        // Always create a new instance if one doesn't exist
         const html5QrCode = scannerRef.current || new Html5Qrcode("reader");
         scannerRef.current = html5QrCode;
 
         const config = {
             fps: 10,
-            qrbox: { width: 300, height: 150 }, // Wide box for barcodes
+            qrbox: { width: 300, height: 150 },
             aspectRatio: 1.0,
+            // Optional: verbose logging for debugging
+            verbose: false
         };
 
         const cameraConfig = cameraId ? { deviceId: { exact: cameraId } } : { facingMode: "environment" };
+
+        // Check if already scanning to prevent double-start errors
+        if (html5QrCode.isScanning) {
+            console.log("Already scanning");
+            return;
+        }
 
         html5QrCode.start(
             cameraConfig,
             config,
             (decodedText) => handleScanResult(decodedText),
-            () => {}
+            (errorMessage) => {
+                // Parse errors are common when it sees a frame with no barcode, ignore them
+            }
         ).catch((err) => {
             console.error("Error starting scanner", err);
-            toast.error("Camera error. Please try switching cameras.");
+            toast.error("Could not start camera. Please ensure permissions are granted.");
+
+            // If start fails, reset the ref so we can try again clean
+            scannerRef.current = null;
         });
     };
 
@@ -347,34 +375,77 @@ const BillingPage = ({ setSelectedPage }) => {
         }
     };
 
-    // 5. Init Effect
+    // 4. Initialize Scanner Effect
     useEffect(() => {
+        let isMounted = true;
+
         if (isScannerOpen) {
+            // Reset the lock when opening scanner
             isScanningProcessing.current = false;
-            Html5Qrcode.getCameras().then(devices => {
-                setCameras(devices);
-                if (devices && devices.length > 0) {
-                    let targetId = selectedCameraId;
-                    if (!targetId) {
-                        // Auto-select the last camera (usually USB/Phone) if multiple exist
-                        targetId = devices.length > 1 ? devices[devices.length - 1].id : devices[0].id;
-                        setSelectedCameraId(targetId);
-                    }
-                    setTimeout(() => startScannerInternal(targetId), 100);
-                } else {
-                    toast.error("No cameras found.");
+
+            // Wait 200ms to ensure the Modal <div id="reader"> is fully rendered
+            const timer = setTimeout(() => {
+                if (!isMounted) return;
+
+                // Double check if element exists
+                if (!document.getElementById("reader")) {
+                    console.error("Scanner element not found");
+                    return;
                 }
-            }).catch(err => {
-                console.error("Camera Error", err);
-                toast.error("Permission denied or no camera.");
-            });
+
+                const html5QrCode = new Html5Qrcode("reader");
+                scannerRef.current = html5QrCode;
+
+                // --- CRITICAL FIX: Add formatsToSupport ---
+                const config = {
+                    fps: 10,
+                    qrbox: { width: 250, height: 150 }, // Reduced slightly to fit mobile screens better
+                    aspectRatio: 1.0,
+                    formatsToSupport: [
+                        Html5QrcodeSupportedFormats.QR_CODE,
+                        Html5QrcodeSupportedFormats.EAN_13,
+                        Html5QrcodeSupportedFormats.EAN_8,
+                        Html5QrcodeSupportedFormats.CODE_128,
+                        Html5QrcodeSupportedFormats.UPC_A,
+                        Html5QrcodeSupportedFormats.UPC_E,
+                        Html5QrcodeSupportedFormats.CODE_39
+                    ]
+                };
+                // ------------------------------------------
+
+                html5QrCode.start(
+                    { facingMode: "environment" },
+                    config,
+                    (decodedText) => {
+                        handleScanResult(decodedText);
+                    },
+                    (errorMessage) => {
+                        // ignore failures, this floods the console otherwise
+                    }
+                ).catch((err) => {
+                    console.error("Error starting scanner", err);
+                    toast.error("Camera error. Please allow permissions.");
+                    setIsScannerOpen(false);
+                });
+            }, 200);
+
+            return () => clearTimeout(timer);
         }
+
+        // Cleanup function
         return () => {
-            if(scannerRef.current && scannerRef.current.isScanning) {
-                scannerRef.current.stop().catch(console.error);
+            isMounted = false;
+            if (scannerRef.current) {
+                if(scannerRef.current.isScanning) {
+                    scannerRef.current.stop().then(() => {
+                        try { scannerRef.current.clear(); } catch(e){}
+                    }).catch(err => console.warn("Stop failed", err));
+                } else {
+                    try { scannerRef.current.clear(); } catch(e){}
+                }
+                scannerRef.current = null;
             }
         };
-        // eslint-disable-next-line
     }, [isScannerOpen]);
 
     // --- NEW: Keyboard navigation handler for product search ---
@@ -1054,17 +1125,23 @@ const BillingPage = ({ setSelectedPage }) => {
                 </div>
             )}
 
-            <Toaster position="top-center" toastOptions={{
-                duration: 2000,
-                style: {
-                    background: 'lightgreen',
-                    color: 'var(--text-color)',
-                    borderRadius: '25px',
-                    padding: '12px',
-                    width: '100%',
-                    fontSize: '16px',
-                },
-            }}   reverseOrder={false} />
+            <Toaster
+                position="top-center"
+                reverseOrder={false}
+                containerStyle={{
+                    zIndex: 100000 // <--- Add this to force it above the Scanner Modal
+                }}
+                toastOptions={{
+                    duration: 4000,
+                    style: {
+                        background: '#ffffff',
+                        color: '#29c22b',
+                        borderRadius: '10px',
+                        padding: '12px',
+                        fontSize: '16px',
+                    },
+                }}
+            />
 
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <h2>Billing</h2>
