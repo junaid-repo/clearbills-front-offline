@@ -210,19 +210,19 @@ const Sidebar = ({ isCollapsed = false,  selectedPage, setSelectedPage }) => {
 
 
             <div className="sidebar-footer">
-                <button
+                {/*<button
                     type="button"
                     onClick={makeClickHandler('chat')}
                     className={`nav-link chat-support ${selectedPage === 'chat' ? 'active' : ''}`}
                     title="Chat Support"
                     style={footerButtonStyleFor('chat')}
                 >
-{/*
+
                     <Headset size={20} weight="duotone" style={{marginRight: '8px', color: "var(--text-color)"}}/>
-*/}
+
                     <i className="fa-duotone fa-solid fa-user-headset" style={{ paddingRight:"15px", fontSize: '20px' }}></i>
                     <span className="nav-text">Chat Support</span>
-                </button>
+                </button>*/}
                 {/*<button
                     type="button"
                     onClick={makeClickHandler('settings')}

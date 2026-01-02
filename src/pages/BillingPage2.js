@@ -1,18 +1,17 @@
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { useBilling } from '../context/BillingContext';
 import Modal from '../components/Modal';
-import { FaPlus, FaTrash, FaSearch, FaPaperPlane, FaPrint } from 'react-icons/fa';
+import { FaPlus, FaTrash, FaSearch, FaPaperPlane, FaPrint, FaChevronDown, FaTimes, FaCrown, FaBarcode } from 'react-icons/fa';import { Html5Qrcode, Html5QrcodeSupportedFormats } from "html5-qrcode"; // <--- ADD THIS
 import '../index.css';
 import { useConfig } from "./ConfigProvider";
 import { getIndianStates } from "../utils/statesUtil";
 import { useAlert } from '../context/AlertContext';
 import toast, {Toaster} from 'react-hot-toast';
 import useHotkeys from '../hooks/useHotkeys'; // Adjust the path if needed
-import { FaChevronDown, FaTimes } from 'react-icons/fa'; // Import new icons
 import PremiumFeature from '../components/PremiumFeature';
 import PremiumBadge from '../context/PremiumBadge';
 import { usePremium } from '../context/PremiumContext'; // <-- ADD THIS
-import { FaCrown } from 'react-icons/fa';
+
 import './AnalyticsPage.css';
 import {UserSwitchIcon} from "@phosphor-icons/react";
 
@@ -92,7 +91,7 @@ const BillingPage = ({ setSelectedPage }) => {
     const [isShortcutListVisible, setIsShortcutListVisible] = useState(false); // <-- ADD THIS
 
 
-   // const BILLING_SESSION_KEY = 'billingPageData';
+    // const BILLING_SESSION_KEY = 'billingPageData';
     // --- NEW: Refs for Hotkeys ---
     const productSearchInputRef = useRef(null);
     const [highlightedIndex, setHighlightedIndex] = useState(-1);
@@ -100,6 +99,11 @@ const BillingPage = ({ setSelectedPage }) => {
     const remarksRef = useRef(null);
     const paymentMethodRef = useRef(null); // Ref for the payment method container
     const customerListRef = useRef(null);
+    const [isScannerOpen, setIsScannerOpen] = useState(false);
+    const [cameras, setCameras] = useState([]);
+    const [selectedCameraId, setSelectedCameraId] = useState(null);
+    const scannerRef = useRef(null);
+    const isScanningProcessing = useRef(false);
     const [highlightedCustomerIndex, setHighlightedCustomerIndex] = useState(-1); // <-- ADD THIS
     const handleCloseSearchModal = useCallback(() => {
         setIsModalOpen(false);
@@ -251,33 +255,167 @@ const BillingPage = ({ setSelectedPage }) => {
         }
     };
 
-    // --- NEW: Keyboard navigation handler for product search ---
-    const handleSearchKeyDown = (e) => {
-        // If no products, do nothing
-        if (products.length === 0) return;
+    // 1. Stop Scanner
+    const stopScanner = () => {
+        if (scannerRef.current) {
+            scannerRef.current.stop().then(() => {
+                scannerRef.current.clear();
+                setIsScannerOpen(false);
+            }).catch(err => {
+                console.error("Failed to stop scanner", err);
+                setIsScannerOpen(false);
+            });
+        } else {
+            setIsScannerOpen(false);
+        }
+    };
 
-        if (e.key === 'ArrowDown') {
-            e.preventDefault(); // Prevent cursor from moving in input
-            setHighlightedIndex(prevIndex =>
-                (prevIndex + 1) % products.length // Wrap around to the start
-            );
-        } else if (e.key === 'ArrowUp') {
-            e.preventDefault(); // Prevent cursor from moving in input
-            setHighlightedIndex(prevIndex =>
-                (prevIndex - 1 + products.length) % products.length // Wrap around to the end
-            );
-        } else if (e.key === 'Enter') {
-            e.preventDefault();
-            if (highlightedIndex >= 0 && products[highlightedIndex]) {
-                const selectedProduct = products[highlightedIndex]; // Get product
-                handleAddProduct(selectedProduct); // Add to cart
-                // Clear search term
-                // --- UPDATE: Keep focus and ensure dropdown can show ---
-                setIsSearchFocused(true);
-                productSearchInputRef.current?.focus(); // Keep focus
-                setHighlightedIndex(-1); // Reset highlight
+    // 2. Handle Scan Result (Continuous Mode)
+    const handleScanResult = async (scannedText) => {
+        if (isScanningProcessing.current) return;
+        isScanningProcessing.current = true;
+
+        // Vibration (if supported by device connected)
+        if (navigator.vibrate) navigator.vibrate(200);
+
+        toast.loading(`Scanning: ${scannedText}...`, { id: "scanLoader" });
+
+        try {
+            const params = new URLSearchParams({ q: scannedText, limit: 5 });
+            const response = await fetch(`${apiUrl}/api/shop/get/forGSTBilling/withCache/productsList?${params.toString()}`, {
+                method: "GET", credentials: 'include', headers: { "Content-Type": "application/json" }
+            });
+
+            const data = await response.json();
+            const items = data?.data || (Array.isArray(data) ? data : []);
+            toast.dismiss("scanLoader");
+
+            if (items.length > 0) {
+                const product = items[0];
+                // Call your existing add product function
+                handleAddProduct(product);
+                toast.success(`ADDED: ${product.name}`, { duration: 2000 });
+            } else {
+                toast.error(`Not Found: ${scannedText}`, { duration: 2000 });
             }
-        } else if (e.key === 'Escape') {
+        } catch (error) {
+            console.error("Scan Error", error);
+            toast.dismiss("scanLoader");
+            toast.error("Error checking product.");
+        } finally {
+            // Cooldown for 2 seconds before next scan
+            setTimeout(() => {
+                isScanningProcessing.current = false;
+            }, 2000);
+        }
+    };
+
+    // 3. Start Scanner Helper
+    const startScannerInternal = (cameraId) => {
+        const html5QrCode = scannerRef.current || new Html5Qrcode("reader");
+        scannerRef.current = html5QrCode;
+
+        const config = {
+            fps: 10,
+            qrbox: { width: 300, height: 150 }, // Wide box for barcodes
+            aspectRatio: 1.0,
+        };
+
+        const cameraConfig = cameraId ? { deviceId: { exact: cameraId } } : { facingMode: "environment" };
+
+        html5QrCode.start(
+            cameraConfig,
+            config,
+            (decodedText) => handleScanResult(decodedText),
+            () => {}
+        ).catch((err) => {
+            console.error("Error starting scanner", err);
+            toast.error("Camera error. Please try switching cameras.");
+        });
+    };
+
+    // 4. Open Scanner & Detect Cameras
+    const startScanner = () => {
+        setIsScannerOpen(true);
+    };
+
+    const handleCameraChange = (e) => {
+        const newCameraId = e.target.value;
+        setSelectedCameraId(newCameraId);
+        if(scannerRef.current && scannerRef.current.isScanning) {
+            scannerRef.current.stop().then(() => startScannerInternal(newCameraId));
+        }
+    };
+
+    // 5. Init Effect
+    useEffect(() => {
+        if (isScannerOpen) {
+            isScanningProcessing.current = false;
+            Html5Qrcode.getCameras().then(devices => {
+                setCameras(devices);
+                if (devices && devices.length > 0) {
+                    let targetId = selectedCameraId;
+                    if (!targetId) {
+                        // Auto-select the last camera (usually USB/Phone) if multiple exist
+                        targetId = devices.length > 1 ? devices[devices.length - 1].id : devices[0].id;
+                        setSelectedCameraId(targetId);
+                    }
+                    setTimeout(() => startScannerInternal(targetId), 100);
+                } else {
+                    toast.error("No cameras found.");
+                }
+            }).catch(err => {
+                console.error("Camera Error", err);
+                toast.error("Permission denied or no camera.");
+            });
+        }
+        return () => {
+            if(scannerRef.current && scannerRef.current.isScanning) {
+                scannerRef.current.stop().catch(console.error);
+            }
+        };
+        // eslint-disable-next-line
+    }, [isScannerOpen]);
+
+    // --- NEW: Keyboard navigation handler for product search ---
+    // --- UPDATED: Keyboard navigation handler for product search ---
+    const handleSearchKeyDown = (e) => {
+        // 1. Handle Up/Down Arrow Navigation
+        if (products.length > 0) {
+            if (e.key === 'ArrowDown') {
+                e.preventDefault();
+                setHighlightedIndex(prevIndex => (prevIndex + 1) % products.length);
+                return;
+            } else if (e.key === 'ArrowUp') {
+                e.preventDefault();
+                setHighlightedIndex(prevIndex => (prevIndex - 1 + products.length) % products.length);
+                return;
+            }
+        }
+
+        // 2. Handle Enter Key
+        if (e.key === 'Enter') {
+            e.preventDefault();
+
+            // Scenario A: User navigated dropdown and selected an item
+            if (highlightedIndex >= 0 && products[highlightedIndex]) {
+                const selectedProduct = products[highlightedIndex];
+                handleAddProduct(selectedProduct);
+                setIsSearchFocused(true);
+                setProductSearchTerm(""); // Clear input
+                productSearchInputRef.current?.focus();
+                setHighlightedIndex(-1);
+            }
+            // Scenario B: BARCODE SCANNER (Or user typed exact code and hit Enter)
+            else if (productSearchTerm.trim() !== "") {
+                // Pass the text in the input box to your existing scan handler
+                handleScanResult(productSearchTerm);
+                setProductSearchTerm(""); // Clear input immediately for next scan
+                setIsSearchFocused(true); // Keep focus for rapid scanning
+            }
+        }
+        // 3. Handle Escape
+        else if (e.key === 'Escape') {
             e.target.blur();
             setIsSearchFocused(false);
             setHighlightedIndex(-1);
@@ -869,7 +1007,7 @@ const BillingPage = ({ setSelectedPage }) => {
 
     // 3. Alt+N to new customer, Escape to close
     useHotkeys('e', () => setIsNewCusModalOpen(true), {shiftKey:true, altKey: true }, !isModalActive);
-   // useHotkeys('Escape', () => setIsNewCusModalOpen(false), {}, isNewCusModalOpen);
+    // useHotkeys('Escape', () => setIsNewCusModalOpen(false), {}, isNewCusModalOpen);
 
     // 4. Ctrl+Alt+N for New Billing
     useHotkeys('n', handleNewBilling, { ctrlKey: true, altKey: true }, !isModalActive);
@@ -885,7 +1023,7 @@ const BillingPage = ({ setSelectedPage }) => {
 
     // 8. Ctrl+Alt+P to preview
     useHotkeys('p', handlePreview, { ctrlKey: true, altKey: true }, !isModalActive);
-   // useHotkeys('Escape', () => setIsPreviewModalOpen(false), {}, isPreviewModalOpen);
+    // useHotkeys('Escape', () => setIsPreviewModalOpen(false), {}, isPreviewModalOpen);
 
     // 9. Alt+Enter to process payment
     useHotkeys('Enter', handleProcessPayment, { altKey: true }, !isModalActive && cart.length > 0);
@@ -1041,7 +1179,7 @@ const BillingPage = ({ setSelectedPage }) => {
                                 </button>
 
                                 {/* --- UPDATED: Hint for shortcut --- */}
-                                 <button className="btn" onClick={() => setIsNewCusModalOpen(true)} title="Shift + Alt + E">
+                                <button className="btn" onClick={() => setIsNewCusModalOpen(true)} title="Shift + Alt + E">
                                     <i className="fa-duotone fa-solid fa-user-plus"></i> Create Customer
                                 </button>
                                 {cart.length > 0 && (
@@ -1146,10 +1284,8 @@ const BillingPage = ({ setSelectedPage }) => {
                                     <input
                                         type="text"
                                         ref={productSearchInputRef}
-                                        // --- UPDATED: Placeholder and disabled state ---
-                                        placeholder={isLimitReached ? "Daily limit reached" : "Search for products to add... (F2)"}
+                                        placeholder={isLimitReached ? "Daily limit reached" : "Search (F2) or Scan Barcode..."}
                                         disabled={isLimitReached}
-                                        // --- END UPDATE ---
                                         value={productSearchTerm}
                                         onChange={(e) => setProductSearchTerm(e.target.value)}
                                         onFocus={() => setIsSearchFocused(true)}
@@ -1162,9 +1298,26 @@ const BillingPage = ({ setSelectedPage }) => {
                                             color: 'var(--text-color)',
                                             fontSize: '1rem',
                                             outline: 'none',
-                                            cursor: isLimitReached ? 'not-allowed' : 'auto' // Show not-allowed cursor
+                                            cursor: isLimitReached ? 'not-allowed' : 'auto'
                                         }}
                                     />
+                                    <button
+                                        onClick={startScanner}
+                                        disabled={isLimitReached}
+                                        style={{
+                                            background: 'none',
+                                            border: 'none',
+                                            cursor: isLimitReached ? 'not-allowed' : 'pointer',
+                                            color: 'var(--primary-color)',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            padding: '5px',
+                                            opacity: isLimitReached ? 0.5 : 1
+                                        }}
+                                        title="Open Barcode Scanner"
+                                    >
+                                        <i className="fa-duotone fa-solid fa-barcode-read" style={{fontSize: "20px", color: "var(--text-color)"}}></i>
+                                    </button>
                                 </div>
 
                                 {/* This dropdown will now be hidden because the input is disabled */}
@@ -1176,7 +1329,7 @@ const BillingPage = ({ setSelectedPage }) => {
                                                 className="search-result-item"
                                                 onClick={() => {
                                                     handleAddProduct(p); // Add to cart
-                                                     // Clear search term
+                                                    // Clear search term
                                                     setIsSearchFocused(true);
 
                                                     productSearchInputRef.current?.focus(); // Keep focus
@@ -1430,7 +1583,7 @@ const BillingPage = ({ setSelectedPage }) => {
                                     type="checkbox"
                                     id="useGstinBill"
                                     className="styled-checkbox"
-                                   // style={{ width: 'auto' }}
+                                    // style={{ width: 'auto' }}
                                     checked={useGstinBill}
                                     onChange={(e) => {
                                         setUseGstinBill(e.target.checked);
@@ -1492,10 +1645,9 @@ const BillingPage = ({ setSelectedPage }) => {
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                                 {[
                                     { type: 'CASH', icon: 'fa-duotone fa-money-bills', key: 'cash' },
-                                    { type: 'CARD', icon: 'fa-duotone fa-solid fa-credit-card', key: 'card' },
-                                    { type: 'UPI', icon: 'fa-duotone fa-solid  fa-qrcode', key: 'upi' }
+                                    { type: 'ONLINE', icon: 'fa-duotone fa-solid  fa-qrcode', key: 'upi' }
                                 ].map(method => {
-                                    const enabled = availableMethods?.[method.key];
+                                    const enabled = true;
 
                                     return (
                                         <label
@@ -1916,6 +2068,58 @@ const BillingPage = ({ setSelectedPage }) => {
                 </div>
                 {/* --- End of Children --- */}
             </Modal>
+            {/* --- SCANNER MODAL (Desktop) --- */}
+            {isScannerOpen && (
+                <div style={{
+                    position: 'fixed', top: 0, left: 0, width: '100%', height: '100%',
+                    backgroundColor: 'rgba(0,0,0,0.85)', zIndex: 9999,
+                    display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center'
+                }}>
+                    <div style={{ background: '#fff', padding: '25px', borderRadius: '15px', width: '500px', maxWidth: '90%', position: 'relative', boxShadow: '0 10px 30px rgba(0,0,0,0.3)' }}>
+                        <h3 style={{marginBottom:'15px', color:'#333', textAlign: 'center'}}>Scan Barcode</h3>
+
+                        {/* Camera Selector */}
+                        {cameras.length > 0 && (
+                            <div style={{marginBottom: '15px'}}>
+                                <select
+                                    value={selectedCameraId || ''}
+                                    onChange={handleCameraChange}
+                                    style={{
+                                        width: '100%', padding: '10px',
+                                        borderRadius: '8px', border: '1px solid #ddd',
+                                        fontSize: '0.95rem'
+                                    }}
+                                >
+                                    {cameras.map(cam => (
+                                        <option key={cam.id} value={cam.id}>
+                                            {cam.label || `Camera ${cam.id.substr(0,5)}...`}
+                                        </option>
+                                    ))}
+                                </select>
+                            </div>
+                        )}
+
+                        <button
+                            onClick={stopScanner}
+                            style={{
+                                position: 'absolute', right: '15px', top: '15px',
+                                background: 'transparent', border: 'none',
+                                fontSize: '1.5rem', cursor:'pointer', color:'#555'
+                            }}
+                        >
+                            <FaTimes/>
+                        </button>
+
+                        {/* Scanner Viewport */}
+                        <div id="reader" style={{ width: '100%', minHeight:'300px', background: '#000', borderRadius: '8px', overflow:'hidden' }}></div>
+
+                        <div style={{textAlign:'center', marginTop:'15px', color:'#666'}}>
+                            <p style={{fontSize: '0.9rem'}}>Continuous Scanning Active</p>
+                            <small>Scan item -> Wait for Beep -> Scan next</small>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };

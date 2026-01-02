@@ -263,7 +263,7 @@ const SettingsPage = () => {
             if (response.ok) {
                 toast.success("Google Drive disconnected", { id: toastId });
                 setDriveBackups([]); // Clear list
-                // Optional: Set a state to show "Connect" button again if you track connection status explicitly
+                setDriveEmail('');   // <--- UPDATE: Clear email state
             } else {
                 throw new Error("Failed to unlink");
             }
@@ -297,18 +297,18 @@ const SettingsPage = () => {
 
     const fetchCloudBackups = async () => {
         setBackupLoading(true);
-        // Remove toast to avoid popup spam on page load
         try {
             const response = await fetch(`${apiUrl}/api/cloud/list`, { credentials: 'include' });
             if (response.ok) {
                 const data = await response.json();
-                // Assuming data might be a list OR an object { files: [], email: '' }
-                // For now, handling your current List<File> response:
+
+                // UPDATE: Handle both Array (legacy) and Object (with email) responses
                 if (Array.isArray(data)) {
                     setDriveBackups(data);
                 } else {
                     setDriveBackups(data.files || []);
-                    setDriveEmail(data.email || ''); // Capture email if backend sends it
+                    // Capture the email sent from backend
+                    setDriveEmail(data.email || '');
                 }
             }
         } catch (error) {
@@ -674,8 +674,21 @@ const SettingsPage = () => {
 
                             {/* Display Logged In Account */}
                             {driveEmail ? (
-                                <div style={{ marginBottom: '20px', color: '#10b981', fontWeight: '500', fontSize: '0.9rem' }}>
-                                    <span style={{color:'#666'}}>Connected as: </span> {driveEmail}
+                                <div style={{
+                                    marginBottom: '20px',
+                                    display: 'inline-flex',
+                                    alignItems: 'center',
+                                    gap: '8px',
+                                    background: '#ecfdf5',
+                                    padding: '6px 12px',
+                                    borderRadius: '20px',
+                                    border: '1px solid #a7f3d0'
+                                }}>
+                                    {/* Green Dot */}
+                                    <div style={{width: '8px', height: '8px', borderRadius: '50%', background: '#10b981'}}></div>
+                                    <span style={{ color: '#047857', fontWeight: '600', fontSize: '0.9rem' }}>
+                                        {driveEmail}
+                                    </span>
                                 </div>
                             ) : (
                                 <p style={{ color: '#666', fontSize: '0.9rem', marginBottom: '20px' }}>
