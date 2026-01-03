@@ -1,12 +1,10 @@
-// src/pages/SettingsPage.jsx
-
 import React, { useState, useEffect, useRef } from 'react';
 import { useConfig } from "./ConfigProvider";
 import { useAlert } from '../context/AlertContext';
 import {
     PaintBrush, Timer, ShoppingCart, Receipt, User, Invoice,
     Database, CloudArrowUp, CloudArrowDown, HardDrives,
-    WarningCircle, CheckCircle, ClockCounterClockwise, Trash, LinkBreak, CalendarCheck,  ArrowsClockwise
+    WarningCircle, CheckCircle, ClockCounterClockwise, Trash, LinkBreak, CalendarCheck, ArrowsClockwise
 } from "@phosphor-icons/react";
 import toast, { Toaster } from 'react-hot-toast';
 import './SettingsPage.css';
@@ -14,9 +12,6 @@ import './InvoiceTemplates.css';
 import './UserProfilePage.css';
 
 // --- Helper: Google Drive Icon SVG ---
-// src/pages/SettingsPage.jsx
-
-// Update the component to accept size and use an img tag
 const GoogleDriveIcon = ({ size = 48 }) => (
     <img
         src="./google-drive.png"
@@ -74,14 +69,21 @@ const SettingsPage = () => {
     const [originalBillingSettings, setOriginalBillingSettings] = useState({});
     const isBillingDirty = JSON.stringify(billingSettings) !== JSON.stringify(originalBillingSettings);
 
-    const [autoBackupSettings, setAutoBackupSettings] = useState('WEEKLY'); // Default WEEKLY
-    const [originalAutoBackup, setOriginalAutoBackup] = useState('WEEKLY');
-    const isAutoBackupDirty = autoBackupSettings !== originalAutoBackup;
+    // --- AUTO BACKUP SETTINGS (UPDATED) ---
+    const [autoBackupSettings, setAutoBackupSettings] = useState('WEEKLY');
+    const [autoBackupTime, setAutoBackupTime] = useState('11:00'); // New State for Time
+
+    // Store original state to detect changes
+    const [originalAutoBackup, setOriginalAutoBackup] = useState({ frequency: 'WEEKLY', time: '11:00' });
+
+    // Check dirtiness based on both frequency and time
+    const isAutoBackupDirty =
+        autoBackupSettings !== originalAutoBackup.frequency ||
+        autoBackupTime !== originalAutoBackup.time;
 
     // --- NEW: Helper to format date ---
     const formatDate = (dateInput) => {
         if (!dateInput) return 'N/A';
-        // Google Drive API sometimes returns date as { value: 1709... } or just an ISO string
         const dateValue = dateInput.value ? dateInput.value : dateInput;
         const date = new Date(dateValue);
 
@@ -212,18 +214,21 @@ const SettingsPage = () => {
         }
     };
 
+    // --- UPDATED: Fetch Backup Settings (Now includes Time) ---
     useEffect(() => {
         const fetchBackupSettings = async () => {
             if (!apiUrl) return;
             try {
-                // Assuming you have/will create this endpoint.
-                // If not, you can mock it or attach it to general settings.
                 const response = await fetch(`${apiUrl}/api/shop/settings/user/backup-schedule`, { credentials: 'include' });
                 if (response.ok) {
                     const data = await response.json();
-                    // Expecting data.frequency to be 'DAILY', 'WEEKLY', 'MONTHLY', or 'OFF'
-                    setAutoBackupSettings(data.frequency || 'WEEKLY');
-                    setOriginalAutoBackup(data.frequency || 'WEEKLY');
+
+                    const freq = data.frequency || 'WEEKLY';
+                    const time = data.time || '00:00'; // Default to midnight if not set
+
+                    setAutoBackupSettings(freq);
+                    setAutoBackupTime(time);
+                    setOriginalAutoBackup({ frequency: freq, time: time });
                 }
             } catch (error) {
                 console.error("Failed to load backup settings", error);
@@ -232,18 +237,24 @@ const SettingsPage = () => {
         fetchBackupSettings();
     }, [apiUrl]);
 
-    // --- NEW: Save Auto Backup Settings ---
+    // --- UPDATED: Save Auto Backup Settings (Now includes Time) ---
     const handleSaveAutoBackup = async () => {
         try {
+            const payload = {
+                frequency: autoBackupSettings,
+                time: autoBackupTime // Send time to backend
+            };
+
             const response = await fetch(`${apiUrl}/api/shop/settings/user/save/backup-schedule`, {
                 method: 'POST',
                 credentials: 'include',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ frequency: autoBackupSettings })
+                body: JSON.stringify(payload)
             });
             if (!response.ok) throw new Error("Failed to save");
+
             toast.success("Auto-backup schedule updated!");
-            setOriginalAutoBackup(autoBackupSettings);
+            setOriginalAutoBackup(payload);
         } catch (error) {
             toast.error("Could not save schedule.");
         }
@@ -262,8 +273,8 @@ const SettingsPage = () => {
 
             if (response.ok) {
                 toast.success("Google Drive disconnected", { id: toastId });
-                setDriveBackups([]); // Clear list
-                setDriveEmail('');   // <--- UPDATE: Clear email state
+                setDriveBackups([]);
+                setDriveEmail('');
             } else {
                 throw new Error("Failed to unlink");
             }
@@ -285,7 +296,6 @@ const SettingsPage = () => {
 
             if (response.ok) {
                 toast.success("File deleted", { id: toastId });
-                // Remove from local state immediately to update UI
                 setDriveBackups(prev => prev.filter(b => b.id !== fileId));
             } else {
                 throw new Error("Delete failed");
@@ -301,13 +311,10 @@ const SettingsPage = () => {
             const response = await fetch(`${apiUrl}/api/cloud/list`, { credentials: 'include' });
             if (response.ok) {
                 const data = await response.json();
-
-                // UPDATE: Handle both Array (legacy) and Object (with email) responses
                 if (Array.isArray(data)) {
                     setDriveBackups(data);
                 } else {
                     setDriveBackups(data.files || []);
-                    // Capture the email sent from backend
                     setDriveEmail(data.email || '');
                 }
             }
@@ -325,23 +332,19 @@ const SettingsPage = () => {
         const toastId = toast.loading("Downloading & Restoring....");
 
         try {
-            // 1. Perform Restore
             const response = await fetch(`${apiUrl}/api/cloud/restore/${fileId}`, {
                 method: 'POST',
                 credentials: 'include'
             });
             if (!response.ok) throw new Error("Cloud restore failed");
 
-            // 2. Refresh Backend Cache (Added as requested)
-            // We wait for this to finish ensuring the server is clean before reload
             try {
                 toast.loading("Refreshing server cache...", { id: toastId });
                 await handleRefreshCache();
             } catch (cacheError) {
-                console.warn("Cache refresh had issues, but restore was successful.", cacheError);
+                console.warn("Cache refresh had issues.", cacheError);
             }
 
-            // 3. Success & Reload
             toast.success("Restore complete! Reloading...", { id: toastId });
             setTimeout(() => window.location.reload(), 2000);
 
@@ -359,7 +362,7 @@ const SettingsPage = () => {
         }
     }, [activeTab]);
 
-    // --- Data Fetching ---
+    // ... (Existing useEffects for Settings, Template, etc.)
     useEffect(() => {
         const fetchSettings = async () => {
             if (!apiUrl) return;
@@ -403,7 +406,7 @@ const SettingsPage = () => {
         fetchSelectedTemplate();
     }, [apiUrl, showAlert]);
 
-    // --- Handlers ---
+    // ... (Existing Handlers: handlePasswordSubmit, createSaveHandler, handleRefreshCache, etc.)
     const handlePasswordSubmit = async () => {
         if (passwordStep === 1) {
             try {
@@ -600,6 +603,7 @@ const SettingsPage = () => {
                 {/* --- TEMPLATES TAB --- */}
                 {activeTab === 'templates' && (
                     <div className="tab-pane invoice-templates-tab">
+                        {/* ... (Existing Template content) ... */}
                         <h3>Select Your Invoice Template</h3>
                         <p>Choose the design you prefer for your generated invoices.</p>
                         <div className="template-grid">
@@ -635,89 +639,71 @@ const SettingsPage = () => {
                     <div className="tab-pane">
                         <h3>Data Management</h3>
 
-                        {/* Google Drive Section (Styled as a distinct card) */}
-                        {/* Google Drive Section (Styled as a distinct card) */}
-                        {/* Google Drive Section (Styled as a distinct card) */}
-                        <div className="google-drive-card" style={{
-                            border: '1px solid #e0e7ff',
-                            borderRadius: '12px',
-                            padding: '25px',
-                            background: 'linear-gradient(to bottom right, #ffffff, #f8fbff)',
-                            boxShadow: '0 4px 12px rgba(0,0,0,0.05)',
-                            textAlign: 'center',
-                            marginBottom: '30px',
-                            position: 'relative'
-                        }}>
-                            {/* 1. Unlink Option (Top Right) - Increased Size */}
-                            {driveBackups.length > 0 && (
-                                <button
-                                    onClick={handleUnlinkDrive}
-                                    title="Disconnect Account"
-                                    style={{
-                                        position: 'absolute', top: '20px', right: '20px',
-                                        background: '#fee2e2', border: '1px solid #ef4444',
-                                        borderRadius: '6px', cursor: 'pointer',
-                                        color: '#b91c1c', display: 'flex', alignItems: 'center',
-                                        gap: '6px', padding: '6px 10px',
-                                        fontSize: '13px', fontWeight: '600'
-                                    }}
-                                >
-                                    <LinkBreak size={22} weight="bold" /> Unlink
-                                </button>
-                            )}
+                        {/* 3) Updated ClassName "cloud-backup-card" for Dark Mode */}
+                        <div className="cloud-backup-card">
 
-                            {/* Header & Account Info */}
+                            {/* Header */}
                             <div style={{ marginBottom: '10px' }}>
                                 <GoogleDriveIcon size={64} />
                             </div>
-                            <h4 style={{ margin: '0 0 5px 0', fontSize: '1.3rem', color: '#333' }}>Google Drive Sync</h4>
+                            <h4 style={{ margin: '0 0 5px 0', fontSize: '1.3rem', color: 'var(--text-color)' }}>Google Drive Sync</h4>
 
-                            {/* Display Logged In Account */}
+                            {/* 1) Updated: Display Logged In Account with Unlink Button beside it */}
                             {driveEmail ? (
-                                <div style={{
-                                    marginBottom: '20px',
-                                    display: 'inline-flex',
-                                    alignItems: 'center',
-                                    gap: '8px',
-                                    background: '#ecfdf5',
-                                    padding: '6px 12px',
-                                    borderRadius: '20px',
-                                    border: '1px solid #a7f3d0'
-                                }}>
-                                    {/* Green Dot */}
-                                    <div style={{width: '8px', height: '8px', borderRadius: '50%', background: '#10b981'}}></div>
-                                    <span style={{ color: '#047857', fontWeight: '600', fontSize: '0.9rem' }}>
-                                        {driveEmail}
-                                    </span>
+                                <div className="drive-account-badge">
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                        <div className="status-dot"></div>
+                                        <span className="drive-email-text">
+                                            {driveEmail}
+                                        </span>
+                                    </div>
+                                    <button
+                                        onClick={handleUnlinkDrive}
+                                        title="Disconnect Account"
+                                        className="drive-unlink-btn"
+                                    >
+                                        <LinkBreak size={16} weight="bold" />
+                                    </button>
                                 </div>
                             ) : (
-                                <p style={{ color: '#666', fontSize: '0.9rem', marginBottom: '20px' }}>
+                                <p style={{ color: 'var(--text-color-secondary)', fontSize: '0.9rem', marginBottom: '20px' }}>
                                     Securely store your data in the cloud.
                                 </p>
                             )}
 
-                            {/* Auto Backup Options (No changes here, keeping it compact) */}
-                            <div style={{
-                                margin: '20px auto', padding: '15px', background: '#fff',
-                                borderRadius: '8px', border: '1px solid #eee', maxWidth: '550px',
-                                display: 'flex', alignItems: 'center', justifyContent: 'space-between'
-                            }}>
+                            {/* 2) Updated: Auto Backup Options with Time Picker */}
+                            <div className="auto-backup-control-panel">
                                 <div style={{ textAlign: 'left' }}>
-                                    <span style={{ display: 'flex', alignItems: 'center', gap: '5px', fontWeight: '600', fontSize: '14px' }}>
+                                    <span style={{ display: 'flex', alignItems: 'center', gap: '5px', fontWeight: '600', fontSize: '14px', color: 'var(--text-color)' }}>
                                         <CalendarCheck size={18} color="#4285F4" /> Auto-Backup
                                     </span>
                                 </div>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap:'wrap', justifyContent:'flex-end' }}>
+
+                                    {/* Frequency Select */}
                                     <select
                                         value={autoBackupSettings}
                                         onChange={(e) => setAutoBackupSettings(e.target.value)}
-                                        style={{ padding: '6px', borderRadius: '4px', border: '1px solid #ddd' }}
+                                        className="settings-input"
                                     >
                                         <option value="DAILY">Daily</option>
                                         <option value="WEEKLY">Weekly</option>
                                         <option value="MONTHLY">Monthly</option>
                                         <option value="OFF">Off</option>
                                     </select>
+
+                                    {/* Time Input (Only show if not OFF) */}
+                                    {autoBackupSettings !== 'OFF' && (
+                                        <input
+                                            type="time"
+                                            className="settings-input"
+                                            value={autoBackupTime}
+                                            onChange={(e) => setAutoBackupTime(e.target.value)}
+                                            style={{width: 'auto'}}
+                                        />
+                                    )}
+
+                                    {/* Save Button */}
                                     {isAutoBackupDirty && (
                                         <button className="btn" onClick={handleSaveAutoBackup} style={{ padding: '6px 12px', fontSize: '12px' }}>Save</button>
                                     )}
@@ -730,10 +716,11 @@ const SettingsPage = () => {
                                 onClick={initiateCloudBackup}
                                 disabled={backupLoading || driveBackups.length >= 5}
                                 style={{
-                                    backgroundColor: driveBackups.length >= 5 ? '#ccc' : '#4285F4',
+                                    backgroundColor: driveBackups.length >= 5 ? 'var(--disabled-color)' : '#4285F4',
                                     color: 'white', padding: '12px 28px', fontSize: '1rem',
                                     display: 'inline-flex', alignItems: 'center', gap: '8px',
-                                    border: 'none', borderRadius: '6px', cursor: driveBackups.length >= 5 ? 'not-allowed' : 'pointer'
+                                    border: 'none', borderRadius: '6px', cursor: driveBackups.length >= 5 ? 'not-allowed' : 'pointer',
+                                    marginTop: '10px'
                                 }}
                             >
                                 <CloudArrowUp size={24} weight="bold" />
@@ -741,25 +728,16 @@ const SettingsPage = () => {
                             </button>
 
                             {/* Drive File List (UPDATED LAYOUT) */}
-                            <div style={{
-                                marginTop: '30px', background: '#fff', border: '1px solid #eee',
-                                borderRadius: '10px', padding: '0', textAlign: 'left', overflow: 'hidden'
-                            }}>
-                                <div style={{
-                                    display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-                                    padding: '12px 20px', background: '#f8fafc', borderBottom: '1px solid #eee'
-                                }}>
-                                    <h6 style={{ margin: 0, color: '#334155', fontSize: '14px', fontWeight: '700' }}>
+                            <div className="backup-list-container">
+                                <div className="backup-list-header">
+                                    <h6 style={{ margin: 0, color: 'var(--text-color)', fontSize: '14px', fontWeight: '700' }}>
                                         <ClockCounterClockwise size={18} style={{ marginBottom: '-3px', marginRight: '6px' }} />
                                         Recent Backups ({driveBackups.length}/5)
                                     </h6>
                                     <button
                                         onClick={fetchCloudBackups}
                                         disabled={backupLoading}
-                                        style={{
-                                            background: 'transparent', border: 'none', cursor: 'pointer',
-                                            color: '#4285F4', display: 'flex', alignItems: 'center', gap: '5px', fontSize: '13px', fontWeight: '600'
-                                        }}
+                                        className="refresh-link-btn"
                                     >
                                         <ArrowsClockwise size={18} className={backupLoading ? "spin-animation" : ""} /> Refresh
                                     </button>
@@ -767,32 +745,24 @@ const SettingsPage = () => {
 
                                 {driveBackups.length === 0 ? (
                                     <div style={{ padding: '30px', textAlign: 'center' }}>
-                                        <p style={{ fontSize: '14px', color: '#94a3b8', fontStyle: 'italic', marginBottom: '15px' }}>
+                                        <p style={{ fontSize: '14px', color: 'var(--text-color-secondary)', fontStyle: 'italic', marginBottom: '15px' }}>
                                             No backups found. Connect Drive to get started.
                                         </p>
                                     </div>
                                 ) : (
-                                    <ul style={{ listStyle: 'none', padding: 0, margin: 0, maxHeight: '280px', overflowY: 'auto' }}>
+                                    <ul className="backup-list">
                                         {driveBackups.map(file => (
-                                            <li key={file.id} style={{
-                                                display: 'grid',
-                                                // Grid layout: Name (Auto) | Date (Fixed) | Actions (Fixed)
-                                                gridTemplateColumns: '1fr 160px 140px',
-                                                alignItems: 'center',
-                                                padding: '14px 20px',
-                                                borderBottom: '1px solid #f1f5f9',
-                                                fontSize: '14px'
-                                            }}>
-                                                {/* Column 1: Name (No .sql extension) */}
+                                            <li key={file.id} className="backup-list-item">
+                                                {/* Column 1: Name */}
                                                 <div style={{ display: 'flex', alignItems: 'center', gap: '10px', overflow: 'hidden' }}>
                                                     <Database color="#4285F4" size={20} weight="fill" />
-                                                    <span style={{ color: '#334155', fontWeight: '600', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                                    <span className="backup-filename">
                                                         {file.name.replace(/\.sql$/i, '')}
                                                     </span>
                                                 </div>
 
-                                                {/* Column 2: Date (New Separate Column) */}
-                                                <div style={{ color: '#64748b', fontSize: '13px', textAlign: 'center' }}>
+                                                {/* Column 2: Date */}
+                                                <div className="backup-date">
                                                     {formatDate(file.createdTime)}
                                                 </div>
 
@@ -802,12 +772,7 @@ const SettingsPage = () => {
                                                         onClick={() => handleCloudRestore(file.id)}
                                                         disabled={backupLoading}
                                                         title="Restore"
-                                                        style={{
-                                                            background: '#eff6ff', border: '1px solid #bfdbfe',
-                                                            color: '#2563eb', padding: '6px 12px',
-                                                            borderRadius: '6px', cursor: 'pointer',
-                                                            fontSize: '12px', fontWeight: '600'
-                                                        }}
+                                                        className="action-btn-restore"
                                                     >
                                                         Restore
                                                     </button>
@@ -815,12 +780,7 @@ const SettingsPage = () => {
                                                         onClick={() => handleDeleteCloudBackup(file.id)}
                                                         disabled={backupLoading}
                                                         title="Delete"
-                                                        style={{
-                                                            background: '#fff', border: '1px solid #fee2e2',
-                                                            color: '#ef4444', padding: '6px 10px',
-                                                            borderRadius: '6px', cursor: 'pointer',
-                                                            display: 'flex', alignItems: 'center'
-                                                        }}
+                                                        className="action-btn-delete"
                                                     >
                                                         <Trash size={16} />
                                                     </button>
@@ -833,6 +793,7 @@ const SettingsPage = () => {
                         </div>
 
                         {/* Local Backup Section */}
+                        {/* ... (Existing Local Backup Logic) ... */}
                         <h5 className="setting-section-header" style={{ marginTop: '20px' }}>
                             <HardDrives size={20} style={{ marginBottom: '-4px', marginRight: '5px' }} />
                             Local Backup (Offline)
@@ -842,7 +803,7 @@ const SettingsPage = () => {
                                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                                     <div>
                                         <span style={{fontWeight:'500'}}>Download Snapshot</span>
-                                        <div style={{fontSize:'12px', color:'#666'}}>Save a .sql file to your computer</div>
+                                        <div style={{fontSize:'12px', color:'var(--text-color-secondary)'}}>Save a .sql file to your computer</div>
                                     </div>
                                     <button
                                         className="btn"
@@ -853,10 +814,10 @@ const SettingsPage = () => {
                                         <HardDrives /> Save to Computer
                                     </button>
                                 </div>
-                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid #eee', paddingTop: '15px' }}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid var(--border-color)', paddingTop: '15px' }}>
                                     <div>
                                         <span style={{fontWeight:'500'}}>Restore from File</span>
-                                        <p style={{ fontSize: '12px', color: 'gray', margin: 0 }}>
+                                        <p style={{ fontSize: '12px', color: 'var(--text-color-secondary)', margin: 0 }}>
                                             Select a .sql file to wipe and restore data.
                                         </p>
                                     </div>
@@ -881,7 +842,7 @@ const SettingsPage = () => {
                     </div>
                 )}
 
-                {/* --- UI, BILLING, SCHEDULER TABS (Content omitted for brevity, logic exists above) --- */}
+                {/* ... (Existing UI, Billing, Invoice tabs) ... */}
                 {activeTab === 'ui' && (
                     <div className="tab-pane">
                         {/* ... UI settings content ... */}
@@ -1123,6 +1084,7 @@ const SettingsPage = () => {
 
                 {activeTab === 'schedulers' && (
                     <div className="tab-pane">
+                        {/* ... (Existing Scheduler Logic) ... */}
                         <div className="setting-item">
                             <div className="setting-toggle">
                                 <ToggleSwitch

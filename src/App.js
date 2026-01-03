@@ -259,6 +259,26 @@ function AppContent() {
         }
     }, [selectedPage, setSearchKey]);
 
+    useEffect(() => {
+        // This function runs when the window/tab is closing
+        const handleTabClose = () => {
+            // Use sendBeacon for reliable delivery on page close
+            // Replace with your actual backend URL
+            const shutdownUrl = "http://localhost:6062/shutdown";
+
+            // sendBeacon sends a POST request by default
+            navigator.sendBeacon(shutdownUrl);
+        };
+
+        window.addEventListener('unload', handleTabClose);
+
+        return () => {
+            window.removeEventListener('unload', handleTabClose);
+        };
+    }, []);
+
+
+
     const isAdmin = user?.roles?.includes('ADMIN') ?? false;
 
     let effectivePage = selectedPage;
@@ -314,8 +334,7 @@ function AppContent() {
             <Routes>
                 <Route
                     path="/"
-                    element={!user ? <LandingPage /> : <Navigate to="/dashboard" replace />}
-                />
+                    element={<Navigate to={!user ? "/login" : "/dashboard"} replace />}                />
                 <Route
                     path="/subscribe"
                     element={

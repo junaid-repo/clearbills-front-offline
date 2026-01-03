@@ -285,3 +285,211 @@ border-bottom: 1px solid #eee;
    .tab-pane > .setting-section-header:first-child {
        margin-top: 0;
    }
+
+/* --- Google Drive Cloud Backup Card --- */
+.cloud-backup-card {
+    border: 1px solid var(--border-color, #e0e7ff);
+    border-radius: 12px;
+    padding: 25px;
+    /* Use glass effect or theme background */
+    background: var(--card-bg, linear-gradient(to bottom right, #ffffff, #f8fbff));
+    box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+    text-align: center;
+    margin-bottom: 30px;
+    position: relative;
+    color: var(--text-color, #333);
+}
+
+/* Dark theme specific override if you use a 'dark-theme' class on body */
+body.dark-theme .cloud-backup-card {
+    background: #1e1e2f; /* Dark background */
+    border-color: #2d2d44;
+}
+
+/* Account Badge & Unlink Button Row */
+.drive-account-badge {
+    margin-bottom: 20px;
+    display: inline-flex;
+    align-items: center;
+    gap: 12px;
+    background: rgba(16, 185, 129, 0.1); /* Light Green transparent */
+    padding: 6px 6px 6px 16px;
+    border-radius: 25px;
+    border: 1px solid rgba(16, 185, 129, 0.3);
+}
+
+.status-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #10b981;
+}
+
+.drive-email-text {
+    color: #047857;
+    font-weight: 600;
+    font-size: 0.9rem;
+}
+
+body.dark-theme .drive-email-text {
+    color: #34d399; /* Lighter green for dark mode */
+}
+
+/* The small red Unlink Button */
+.drive-unlink-btn {
+    background: #fee2e2;
+    border: 1px solid #f87171;
+    border-radius: 50%; /* Circle shape */
+    cursor: pointer;
+    color: #b91c1c;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    padding: 0;
+    transition: all 0.2s;
+}
+
+.drive-unlink-btn:hover {
+    background: #ef4444;
+    color: white;
+}
+
+/* Auto Backup Control Panel */
+.auto-backup-control-panel {
+    margin: 20px auto;
+    padding: 15px;
+    background: var(--bg-color-secondary, #fff);
+    border-radius: 8px;
+    border: 1px solid var(--border-color, #eee);
+    max-width: 550px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+body.dark-theme .auto-backup-control-panel {
+    background: #2a2a40;
+    border-color: #444;
+}
+
+/* Common Input Styling for Select/Time in this section */
+.settings-input {
+    padding: 6px;
+    border-radius: 4px;
+    border: 1px solid var(--border-color, #ddd);
+    background-color: var(--bg-color, #fff);
+    color: var(--text-color, #333);
+}
+
+/* Backup List Container */
+.backup-list-container {
+    margin-top: 30px;
+    background: var(--bg-color-secondary, #fff);
+    border: 1px solid var(--border-color, #eee);
+    border-radius: 10px;
+    padding: 0;
+    text-align: left;
+    overflow: hidden;
+}
+
+body.dark-theme .backup-list-container {
+    background: #2a2a40;
+    border-color: #444;
+}
+
+.backup-list-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 20px;
+    background: var(--bg-color-tertiary, #f8fafc);
+    border-bottom: 1px solid var(--border-color, #eee);
+}
+
+body.dark-theme .backup-list-header {
+    background: #33334d;
+    border-color: #444;
+}
+
+.refresh-link-btn {
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    color: #4285F4;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 13px;
+    font-weight: 600;
+}
+
+.backup-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    max-height: 280px;
+    overflow-y: auto;
+}
+
+.backup-list-item {
+    display: grid;
+    grid-template-columns: 1fr 160px 140px;
+    align-items: center;
+    padding: 14px 20px;
+    border-bottom: 1px solid var(--border-color, #f1f5f9);
+    font-size: 14px;
+    color: var(--text-color, #333);
+}
+
+body.dark-theme .backup-list-item {
+    border-bottom: 1px solid #444;
+}
+
+.backup-filename {
+    color: var(--text-color, #334155);
+    font-weight: 600;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.backup-date {
+    color: var(--text-color-secondary, #64748b);
+    font-size: 13px;
+    text-align: center;
+}
+
+/* Action Buttons (Restore/Delete) */
+.action-btn-restore {
+    background: #eff6ff;
+    border: 1px solid #bfdbfe;
+    color: #2563eb;
+    padding: 6px 12px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 12px;
+    font-weight: 600;
+}
+body.dark-theme .action-btn-restore {
+    background: #1e3a8a;
+    border-color: #3b82f6;
+    color: #93c5fd;
+}
+
+.action-btn-delete {
+    background: #fff;
+    border: 1px solid #fee2e2;
+    color: #ef4444;
+    padding: 6px 10px;
+    border-radius: 6px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+}
+body.dark-theme .action-btn-delete {
+    background: #450a0a;
+    border-color: #ef4444;
+    color: #fca5a5;
+}
