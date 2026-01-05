@@ -1491,3 +1491,100 @@ body.dark-theme .shortcut-key {
     font-weight: 600;
     cursor: pointer;
 }
+
+/* --- Pagination Container Layout --- */
+.pagination-footer {
+    margin-top: 20px;
+    display: grid;
+    grid-template-columns: 1fr auto 1fr; /* Left, Center, Right */
+    alignItems: center;
+    gap: 10px;
+    padding: 10px 5px;
+}
+
+/* --- Left Side: Page Selector Styling --- */
+.page-size-container {
+    justify-self: start;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.page-size-label {
+    font-size: 0.9rem;
+    color: var(--text-color);
+    font-weight: 500;
+}
+
+/* Wrapper for the custom arrow */
+.select-wrapper {
+    position: relative;
+    display: inline-block;
+}
+
+/* The actual dropdown */
+.custom-page-select {
+    appearance: none; /* Remove default browser arrow */
+    -webkit-appearance: none;
+    -moz-appearance: none;
+
+    background-color: var(--glass-bg, rgba(255, 255, 255, 0.8));
+    color: var(--text-color, #333);
+    border: 1px solid var(--border-color, #ccc);
+
+    font-size: 0.95rem;
+    font-family: inherit;
+    font-weight: 600;
+
+    padding: 8px 36px 8px 16px; /* Extra padding on right for arrow */
+    border-radius: 12px;
+    cursor: pointer;
+    outline: none;
+    transition: all 0.2s ease;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+}
+
+.custom-page-select:hover {
+    border-color: var(--primary-color, #007bff);
+    background-color: var(--input-bg, #fff);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+}
+
+.custom-page-select:focus {
+    border-color: var(--primary-color, #007bff);
+    box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.2);
+}
+
+/* Creating a Custom CSS Arrow using ::after on the wrapper
+   (Note: select elements handle pseudo-elements poorly, so we style the wrapper)
+*/
+.select-wrapper::after {
+    content: "▼";
+    font-size: 0.7rem;
+    color: var(--text-color, #666);
+    position: absolute;
+    right: 14px;
+    top: 50%;
+    transform: translateY(-50%);
+    pointer-events: none; /* Allows click to pass through to the select */
+}
+
+/* --- Pagination Buttons (Existing styles, just ensuring alignment) --- */
+.pagination-controls {
+    display: flex;
+    gap: 5px;
+    align-items: center;
+}
+
+/* Mobile Responsiveness */
+@media (max-width: 768px) {
+    .pagination-footer {
+        grid-template-columns: 1fr; /* Stack vertically on phone */
+        justify-items: center;
+        gap: 15px;
+    }
+    .page-size-container {
+        justify-self: center;
+    }
+}

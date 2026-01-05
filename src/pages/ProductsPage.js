@@ -1,26 +1,21 @@
 // src/pages/ProductsPage.js
-import React, { useState, useEffect, useRef, useCallback, useContext } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import Modal from '../components/Modal';
 import { useConfig } from "./ConfigProvider";
-import { MdEdit, MdDelete } from "react-icons/md";
 import { useLocation } from 'react-router-dom';
 import { useSearchKey } from '../context/SearchKeyContext';
 import toast, { Toaster } from 'react-hot-toast';
-import { FaCheckDouble, FaTimes, FaInfoCircle, FaDownload } from 'react-icons/fa';
+import { FaInfoCircle, FaDownload, FaTimes, FaChevronDown, FaBarcode } from 'react-icons/fa';
 import { useAlert } from '../context/AlertContext';
 import PremiumFeature from '../components/PremiumFeature';
 
-import PlaylistAddCheckIcon from '@mui/icons-material/PlaylistAddCheck';
-import DeleteIcon from '@mui/icons-material/Delete';
-import {
-    Trash
-} from "@phosphor-icons/react";
+// --- IMPORTS FOR PDF GENERATION ---
+import jsPDF from 'jspdf';
+import QRCode from 'qrcode';
+import JsBarcode from 'jsbarcode';
 
 /**
  * Custom hook to debounce a value.
- * @param {any} value The value to debounce.
- * @param {number} delay The debounce delay in milliseconds.
- * @returns {any} The debounced value.
  */
 const useDebounce = (value, delay) => {
     const [debouncedValue, setDebouncedValue] = useState(value);
@@ -38,8 +33,7 @@ const useDebounce = (value, delay) => {
 const ProductsPage = () => {
     // --- STATE MANAGEMENT ---
     const { showAlert } = useAlert();
-    // Original State
-    const [products, setProducts] = useState([]); // Holds data for the CURRENT page only
+    const [products, setProducts] = useState([]);
     const [searchTerm, setSearchTerm] = useState('');
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [isUpdateModalOpen, setIsUpdateModalOpen] = useState(false);
@@ -56,9 +50,6 @@ const ProductsPage = () => {
     const [selectedProductId, setSelectedProductId] = useState(null);
 
     const standardTaxSlabs = ['0', '5', '12', '18', '28'];
-
-// Check if the current 'tax' value is one of the standard slabs.
-// We convert 'tax' to a string just in case it's a number from the database.
     const currentTaxIsStandard = standardTaxSlabs.includes(String(tax));
 
     // CSV Upload State
@@ -66,26 +57,40 @@ const ProductsPage = () => {
     const [isUploading, setIsUploading] = useState(false);
     const [uploadError, setUploadError] = useState(null);
 
-    // NEW: Pagination & Caching State
+    // Pagination & Caching
     const [isLoading, setIsLoading] = useState(false);
     const [currentPage, setCurrentPage] = useState(1);
     const [totalPages, setTotalPages] = useState(0);
     const [totalProducts, setTotalProducts] = useState(0);
-    const productsCache = useRef({}); // In-memory cache: { cacheKey: { data, totalPages, totalCount } }
-    const ITEMS_PER_PAGE = 10; // Or make this configurable
 
-// Add these with your other useState declarations
+    const [itemsPerPage, setItemsPerPage] = useState(10);
+
+    // Selection Mode
     const [isSelectionMode, setIsSelectionMode] = useState(false);
     const [selectedProducts, setSelectedProducts] = useState(new Set());
+    // State for bulk generate dropdown
+    const [showGenerateOptions, setShowGenerateOptions] = useState(false);
 
-    // NEW: Debounced search term to reduce API calls
     const debouncedSearchTerm = useDebounce(searchTerm, 500);
 
-    // Column Chooser State (Unchanged)
-    const COLUMN_STORAGE_KEY = 'products_visible_columns_v1';
+    // Column Chooser
+    const COLUMN_STORAGE_KEY = 'products_visible_columns_v2';
     const columnsRef = useRef(null);
     const [isColumnsOpen, setIsColumnsOpen] = useState(false);
-    const defaultVisibleColumns = { id: true, name: true, category: true, hsn: true, costPrice: true, price: true, tax: true, stock: true, status: true, actions: true };
+    const defaultVisibleColumns = {
+        id: true,
+        name: true,
+        category: true,
+        hsn: true,
+        costPrice: true,
+        price: true,
+        tax: true,
+        stock: true,
+        status: true,
+        generateTag: true,
+        actions: true
+    };
+
     const [visibleColumns, setVisibleColumns] = useState(() => {
         try {
             const saved = localStorage.getItem(COLUMN_STORAGE_KEY);
@@ -99,34 +104,17 @@ const ProductsPage = () => {
         localStorage.setItem(COLUMN_STORAGE_KEY, JSON.stringify(visibleColumns));
     }, [visibleColumns]);
 
-    // Close columns dropdown when clicking outside
-    useEffect(() => {
-        const onClick = (e) => {
-            if (columnsRef.current && !columnsRef.current.contains(e.target)) {
-                setIsColumnsOpen(false);
-            }
-        };
-        document.addEventListener('mousedown', onClick);
-        return () => document.removeEventListener('mousedown', onClick);
-    }, []);
-
-    // ✅ --- START: PERSISTED SORT STATE ---
-
-    // 1. Define a constant for the localStorage key.
+    // Sorting
     const SORT_STORAGE_KEY = 'products_sort_config_v1';
-
-    // 2. Initialize sortConfig state by reading from localStorage.
     const [sortConfig, setSortConfig] = useState(() => {
         try {
             const saved = localStorage.getItem(SORT_STORAGE_KEY);
             return saved ? JSON.parse(saved) : { key: 'createdAt', direction: 'desc' };
         } catch (err) {
-            console.error("Failed to parse sort config from localStorage", err);
             return { key: 'createdAt', direction: 'desc' };
         }
     });
 
-    // 3. Initialize hasSortActive based on the loaded sortConfig.
     const [hasSortActive, setHasSortActive] = useState(() => {
         try {
             const saved = localStorage.getItem(SORT_STORAGE_KEY);
@@ -138,33 +126,25 @@ const ProductsPage = () => {
         return false;
     });
 
-    // 4. Add a useEffect to save sortConfig whenever it changes.
     useEffect(() => {
         localStorage.setItem(SORT_STORAGE_KEY, JSON.stringify(sortConfig));
     }, [sortConfig]);
 
-    // ✅ --- END: PERSISTED SORT STATE ---
-
-
     // --- API & DATA HANDLING ---
-
     const config = useConfig();
     const apiUrl = config ? config.API_URL : "";
 
-    // NEW: Centralized function to fetch products with caching
     const fetchProducts = useCallback(async () => {
         if (!apiUrl) return;
 
         const sortKey = sortConfig.key || 'createdAt';
         const sortDir = sortConfig.direction || 'desc';
 
-
-        // 2. Fetch from API if not in cache
         setIsLoading(true);
         try {
             const url = new URL(`${apiUrl}/api/shop/get/withCache/productsList`);
             url.searchParams.append('page', currentPage);
-            url.searchParams.append('limit', ITEMS_PER_PAGE);
+            url.searchParams.append('limit', itemsPerPage);
             url.searchParams.append('sort', sortKey);
             url.searchParams.append('dir', sortDir);
             if (debouncedSearchTerm) {
@@ -174,15 +154,10 @@ const ProductsPage = () => {
             const response = await fetch(url, { method: "GET", credentials: 'include' });
             if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
 
-            // Backend should return: { data: [], totalPages: N, totalCount: N }
             const result = await response.json();
-            console.log("Fetched products:", result);
-            // 3. Update state and cache
             setProducts(result.data || []);
             setTotalPages(result.totalPages || 0);
             setTotalProducts(result.totalCount || 0);
-
-
 
         } catch (error) {
             console.error("Error fetching products:", error);
@@ -191,19 +166,16 @@ const ProductsPage = () => {
         } finally {
             setIsLoading(false);
         }
-    }, [apiUrl, currentPage, debouncedSearchTerm, sortConfig]);
+    }, [apiUrl, currentPage, debouncedSearchTerm, sortConfig, itemsPerPage]);
 
-    // Main effect to trigger fetching data
     useEffect(() => {
         fetchProducts();
     }, [fetchProducts]);
 
-    // Effect to reset page and clear cache when search or sort changes
     useEffect(() => {
         setCurrentPage(1);
-    }, [debouncedSearchTerm, sortConfig]);
+    }, [debouncedSearchTerm, sortConfig, itemsPerPage]);
 
-    // On mount, check for searchKey in query string
     const location = useLocation();
     useEffect(() => {
         const params = new URLSearchParams(location.search);
@@ -213,13 +185,147 @@ const ProductsPage = () => {
         }
     }, [location.search]);
 
-    // Sync search bar with global search key
     const { searchKey, setSearchKey } = useSearchKey();
     useEffect(() => {
         if (searchKey && searchKey !== searchTerm) {
             setSearchTerm(searchKey);
         }
     }, [searchKey]);
+
+    useEffect(() => {
+        return () => {
+            setSearchKey('');
+        };
+    }, [setSearchKey]);
+
+    // --- PDF GENERATION LOGIC ---
+    const handleGenerateTags = async (productList, type) => {
+        if (!productList || productList.length === 0) return;
+
+        const toastId = toast.loading(`Preparing ${type === 'qr' ? 'QR Codes' : 'Barcodes'} for print...`);
+
+        try {
+            const doc = new jsPDF();
+            const isQR = type === 'qr';
+
+            let fileName = "Product_Tags";
+            if (productList.length === 1) {
+                fileName = `${productList[0].name}_tag`;
+            } else {
+                fileName = `Bulk_${type === 'qr' ? 'QRs' : 'Barcodes'}_${new Date().toISOString().slice(0, 10)}`;
+            }
+
+            doc.setProperties({ title: fileName });
+
+            const margin = 10;
+            const startX = margin;
+            const startY = margin;
+            const cardWidth = isQR ? 45 : 50;
+            const cardHeight = isQR ? 45 : 30;
+
+            const availableWidth = 210 - (margin * 2);
+            const cols = Math.floor(availableWidth / cardWidth);
+            const availableHeight = 297 - (margin * 2);
+
+            let xPos = startX;
+            let yPos = startY;
+            let colCounter = 0;
+
+            for (const product of productList) {
+                if (yPos + cardHeight > startY + availableHeight) {
+                    doc.addPage();
+                    yPos = startY;
+                    xPos = startX;
+                    colCounter = 0;
+                }
+
+                let imgData = '';
+                let imgWOnPdf, imgHOnPdf;
+
+                if (isQR) {
+                    try {
+                        imgData = await QRCode.toDataURL(product.name, { margin: 1, width: 100 });
+                        imgWOnPdf = 30;
+                        imgHOnPdf = 30;
+                    } catch (err) {
+                        console.error("QR Error", err);
+                    }
+                } else {
+                    try {
+                        const canvas = document.createElement("canvas");
+                        JsBarcode(canvas, product.name, {
+                            format: "CODE128",
+                            displayValue: false,
+                            margin: 0,
+                            height: 40,
+                            width: 2
+                        });
+                        imgData = canvas.toDataURL("image/png");
+                        imgWOnPdf = 40;
+                        imgHOnPdf = 15;
+                    } catch (err) {
+                        console.error("Barcode Error", err);
+                    }
+                }
+
+                const xImg = xPos + (cardWidth - imgWOnPdf) / 2;
+                const yImgOffset = isQR ? (cardHeight - imgHOnPdf) / 2 : 5;
+                const yImg = yPos + yImgOffset;
+
+                if (imgData) {
+                    doc.addImage(imgData, 'PNG', xImg, yImg, imgWOnPdf, imgHOnPdf);
+                }
+
+                doc.setFontSize(8);
+                let text = product.name || "";
+                const maxChars = isQR ? 18 : 22;
+                if (text.length > maxChars) text = text.substring(0, maxChars) + '...';
+
+                const textWidth = doc.getTextWidth(text);
+                const xText = xPos + (cardWidth - textWidth) / 2;
+                const yText = yImg + imgHOnPdf + 4;
+
+                doc.text(text, xText, yText);
+
+                doc.setDrawColor(230);
+                doc.rect(xPos, yPos, cardWidth, cardHeight);
+
+                colCounter++;
+                if (colCounter >= cols) {
+                    colCounter = 0;
+                    xPos = startX;
+                    yPos += cardHeight;
+                } else {
+                    xPos += cardWidth;
+                }
+            }
+
+            doc.autoPrint();
+            const blobUrl = doc.output('bloburl');
+            window.open(blobUrl, '_blank');
+
+            toast.dismiss(toastId);
+            toast.success("Opened print view");
+
+        } catch (error) {
+            console.error("Error generating PDF:", error);
+            toast.dismiss(toastId);
+            toast.error("Failed to generate PDF");
+        }
+    };
+
+    const handleBulkGenerate = (type) => {
+        const selectedObjs = products.filter(p => selectedProducts.has(p.id));
+        if (selectedObjs.length > 0) {
+            handleGenerateTags(selectedObjs, type);
+            setShowGenerateOptions(false);
+        } else {
+            showAlert("No selected products found in current view.");
+        }
+    };
+
+
+    // --- EVENT HANDLERS ---
     const handleDownloadTemplate = () => {
         const headers = "selectedProductId,name,hsn,category,costPrice,price,stock,tax";
         const blob = new Blob([headers], { type: "text/csv;charset=utf-8;" });
@@ -232,8 +338,6 @@ const ProductsPage = () => {
         document.body.removeChild(link);
     };
 
-    // --- EVENT HANDLERS ---
-
     const handleEditClick = (product) => {
         setSelectedProductId(product.id);
         setName(product.name);
@@ -243,7 +347,6 @@ const ProductsPage = () => {
         setCostPrice(product.costPrice || "");
         setStock(product.stock);
         setTax(product.tax);
-        setHsn(product.hsn);
         setIsUpdateModalOpen(true);
     };
 
@@ -257,11 +360,12 @@ const ProductsPage = () => {
         setCostPrice("");
         setSelectedProductId(null);
     };
+
     const handleCloseUpdateModal = () => {
-        setIsUpdateModalOpen(false); // This closes the modal
-        resetForm();               // This clears the form fields
+        setIsUpdateModalOpen(false);
+        resetForm();
     };
-    // UPDATED: CUD operations now invalidate the cache
+
     const handleAddProduct = async (e) => {
         e.preventDefault();
         try {
@@ -274,7 +378,7 @@ const ProductsPage = () => {
             });
             if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
             toast.success('Product added successfully!');
-            fetchProducts(); // <-- Refresh the product list
+            fetchProducts();
             setIsModalOpen(false);
             resetForm();
         } catch (error) {
@@ -295,10 +399,9 @@ const ProductsPage = () => {
             });
             if (!response.ok) throw new Error(`HTTP error: ${response.status}`);
 
-            fetchProducts(); // <-- Refresh the product list
+            fetchProducts();
             setIsUpdateModalOpen(false);
             toast.success('Product updated successfully!');
-
             resetForm();
         } catch (err) {
             console.error("Error updating product:", err);
@@ -316,7 +419,7 @@ const ProductsPage = () => {
                 if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
                 toast.error('Product deleted successfully!');
                 fetchProducts();
-                return { success: true, id }; // Return success for Promise.all
+                return { success: true, id };
             } catch (error) {
                 console.error("Error deleting product:", error);
                 showAlert("Something went wrong while deleting the product.");
@@ -325,7 +428,6 @@ const ProductsPage = () => {
     };
 
     const handleDeleteProductBulk = async (id) => {
-        // This function will now be wrapped by the bulk delete handler
         try {
             const response = await fetch(`${apiUrl}/api/shop/product/delete/${id}`, {
                 method: "DELETE",
@@ -334,17 +436,17 @@ const ProductsPage = () => {
             if (!response.ok) {
                 throw new Error(`Failed to delete product ID ${id}`);
             }
-            return { success: true, id }; // Return success for Promise.all
+            return { success: true, id };
         } catch (error) {
             console.error("Error deleting product:", error);
             toast.error(`Failed to delete product ID ${id}.`);
-            return { success: false, id }; // Return failure for Promise.all
+            return { success: false, id };
         }
     };
 
     const handleToggleSelectionMode = () => {
         setIsSelectionMode(prev => !prev);
-        setSelectedProducts(new Set()); // Clear selections when toggling
+        setSelectedProducts(new Set());
     };
 
     const handleSelectProduct = (productId) => {
@@ -359,24 +461,35 @@ const ProductsPage = () => {
         });
     };
 
+    // --- NEW: Handle Select All Visible Rows ---
+    const isAllVisibleSelected = products.length > 0 && products.every(p => selectedProducts.has(p.id));
+
+    const handleSelectAll = () => {
+        const newSelected = new Set(selectedProducts);
+        if (isAllVisibleSelected) {
+            // Deselect visible
+            products.forEach(p => newSelected.delete(p.id));
+        } else {
+            // Select visible
+            products.forEach(p => newSelected.add(p.id));
+        }
+        setSelectedProducts(newSelected);
+    };
+
     const handleBulkDelete = async () => {
         const numSelected = selectedProducts.size;
         if (numSelected === 0) return;
 
         if (window.confirm(`Are you sure you want to delete ${numSelected} selected product(s)?`)) {
             const deletePromises = Array.from(selectedProducts).map(id => handleDeleteProductBulk(id));
-
-            // We use Promise.all to run delete requests concurrently
             const results = await Promise.all(deletePromises);
-
             const successfulDeletes = results.filter(r => r.success).length;
 
             if (successfulDeletes > 0) {
                 toast.success(`${successfulDeletes} product(s) deleted successfully!`);
-                fetchProducts(); // <-- Refresh the list after all deletions are done
+                fetchProducts();
             }
 
-            // Exit selection mode after operation
             setIsSelectionMode(false);
             setSelectedProducts(new Set());
         }
@@ -411,111 +524,40 @@ const ProductsPage = () => {
         }
     };
 
-   /* // UPDATED: Export should hit a dedicated backend endpoint for efficiency
-   const handleExportCSV = async () => {
-    if (totalProducts === 0) {
-        showAlert("No products to export.");
-        return;
-    }
-    if (!window.confirm(`Export all ${totalProducts} filtered products to CSV?`)) return;
-
-    try {
-        // Build request URL
-        const url = new URL(`${apiUrl}/api/shop/export/products`);
-        if (debouncedSearchTerm) url.searchParams.append("search", debouncedSearchTerm);
-        if (sortConfig.key) {
-            url.searchParams.append("sort", sortConfig.key);
-            url.searchParams.append("dir", sortConfig.direction);
-        }
-
-        // Fetch CSV file from backend
-        const response = await fetch(url.toString(), {
-            method: "GET",
-            credentials: "include",
-            headers: {
-                "Content-Type": "text/csv",
-            },
-        });
-
-        if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
-        }
-
-        // Convert response to Blob
-        const blob = await response.blob();
-        const downloadUrl = window.URL.createObjectURL(blob);
-
-        // Create temporary <a> and trigger download
-        const link = document.createElement("a");
-        link.href = downloadUrl;
-        const now = new Date();
-        const timestamp = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, "0")}${String(now.getDate()).padStart(2, "0")}_${String(now.getHours()).padStart(2, "0")}${String(now.getMinutes()).padStart(2, "0")}`;
-        link.setAttribute("download", `Products_Export_${timestamp}.csv`);
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-
-        // Cleanup URL object
-        window.URL.revokeObjectURL(downloadUrl);
-
-    } catch (err) {
-        console.error("Error exporting CSV:", err);
-        showAlert("Failed to export products.");
-    }
-};*/
-
-
     const handleExportCSV = async () => {
         if (totalProducts === 0) {
             showAlert("No products to export.");
             return;
         }
 
-        // Confirm with the user
         if (!window.confirm(`Do you want to export all products to CSV?`)) {
             return;
         }
 
         try {
-            // Build request URL - plain, with no payload/params as requested
             const url = `${apiUrl}/api/shop/export/products`;
-
-            // Fetch CSV file from backend
-            const response = await fetch(url, {
-                method: "GET",
-                credentials: "include",
-            });
+            const response = await fetch(url, { method: "GET", credentials: "include" });
 
             if (!response.ok) {
-                // Try to get a more helpful error message
                 let errorText = `HTTP error! status: ${response.status}`;
                 try {
-                    // Assumes backend sends JSON on error, e.g., { message: "..." }
                     const errorData = await response.json();
                     errorText = errorData.message || JSON.stringify(errorData);
                 } catch (e) {
-                    // Fallback if the error response isn't JSON
                     errorText = await response.text();
                 }
                 throw new Error(errorText);
             }
 
-            // Convert response bytestream to a Blob
             const blob = await response.blob();
             const downloadUrl = window.URL.createObjectURL(blob);
-
-            // Create temporary <a> and trigger download
             const link = document.createElement("a");
             link.href = downloadUrl;
             const now = new Date();
             const timestamp = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, "0")}${String(now.getDate()).padStart(2, "0")}_${String(now.getHours()).padStart(2, "0")}${String(now.getMinutes()).padStart(2, "0")}`;
-
-            // Set a descriptive filename
             link.setAttribute("download", `Products_Export_All_${timestamp}.csv`);
             document.body.appendChild(link);
             link.click();
-
-            // Clean up
             document.body.removeChild(link);
             window.URL.revokeObjectURL(downloadUrl);
 
@@ -524,7 +566,6 @@ const ProductsPage = () => {
             showAlert(`Failed to export products: ${err.message}`);
         }
     };
-
 
     const handleCsvChange = (e) => {
         const file = e.target.files?.[0] || null;
@@ -544,14 +585,17 @@ const ProductsPage = () => {
         }
     };
 
+    const toggleSort = (key) => {
+        setSortConfig(prev => ({
+            key,
+            direction: (prev.key === key && prev.direction === 'asc') ? 'desc' : 'asc'
+        }));
+        setHasSortActive(true);
+    };
 
-
-    // Column Chooser State (already using localStorage, no changes needed here)
-
-
-    useEffect(() => {
-        localStorage.setItem(COLUMN_STORAGE_KEY, JSON.stringify(visibleColumns));
-    }, [visibleColumns]);
+    const toggleColumn = (col) => {
+        setVisibleColumns(prev => ({ ...prev, [col]: !prev[col] }));
+    };
 
     useEffect(() => {
         const onClick = (e) => {
@@ -562,32 +606,12 @@ const ProductsPage = () => {
         document.addEventListener('mousedown', onClick);
         return () => document.removeEventListener('mousedown', onClick);
     }, []);
-    // UPDATED: Sort handler now just updates state
-    const toggleSort = (key) => {
-        setSortConfig(prev => ({
-            key,
-            direction: (prev.key === key && prev.direction === 'asc') ? 'desc' : 'asc'
-        }));
-        // mark that user has initiated sorting so arrows become visible
-        setHasSortActive(true);
-    };
-
-    const toggleColumn = (col) => {
-        setVisibleColumns(prev => ({ ...prev, [col]: !prev[col] }));
-    };
-    useEffect(() => {
-        return () => {
-            setSearchKey('');
-        };
-    }, [setSearchKey]);
-    // --- RENDER LOGIC & JSX ---
 
     const selectedColsCount = Object.values(visibleColumns).filter(Boolean).length;
     const columnsButtonLabel = selectedColsCount === Object.keys(visibleColumns).length ? 'Columns' : `Columns (${selectedColsCount})`;
 
-    // NEW: Pagination Component
     const Pagination = () => {
-        if (totalPages <= 1) return null;
+        if (totalProducts === 0) return null;
 
         const getPaginationItems = () => {
             const items = [];
@@ -606,26 +630,57 @@ const ProductsPage = () => {
         };
 
         return (
-            <div className="pagination">
+            <div className="pagination" style={{
+                position: 'relative',
+                display: 'flex',
+                justifyContent: 'center',
+                alignItems: 'center',
+                marginTop: '20px',
+                minHeight: '40px'
+            }}>
+                <div style={{ position: 'absolute', left: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <span className="select-wrapper">Rows:</span>
 
-                <div className="pagination-controls">
-                    <button onClick={() => setCurrentPage(p => p - 1)} disabled={currentPage === 1}>
-                        &laquo; Prev
-                    </button>
-                    {getPaginationItems().map((page, index) => (
-                        <button
-                            key={index}
-                            onClick={() => setCurrentPage(page)}
-                            className={currentPage === page ? 'active' : ''}
-                            disabled={page === '...'}
-                        >
-                            {page}
-                        </button>
-                    ))}
-                    <button onClick={() => setCurrentPage(p => p + 1)} disabled={currentPage === totalPages}>
-                        Next &raquo;
-                    </button>
+                    <select
+                        value={itemsPerPage}
+                        onChange={(e) => setItemsPerPage(Number(e.target.value))}
+                        style={{
+                            padding: '4px 8px',
+                            borderRadius: '6px',
+                            border: '1px solid var(--primary-color-light)',
+                            backgroundColor: 'white',
+                            outline: 'none',
+                            cursor: 'pointer',
+                            fontSize: '0.9rem'
+                        }}
+                    >
+                        {[10, 20, 30, 50, 100].map(num => (
+                            <option key={num} value={num}>{num}</option>
+                        ))}
+                    </select>
                 </div>
+
+                {totalPages > 1 && (
+                    <div className="pagination-controls">
+                        <button onClick={() => setCurrentPage(p => p - 1)} disabled={currentPage === 1}>
+                            &laquo; Prev
+                        </button>
+                        {getPaginationItems().map((page, index) => (
+                            <button
+                                key={index}
+                                onClick={() => typeof page === 'number' && setCurrentPage(page)}
+                                className={currentPage === page ? 'active' : ''}
+                                disabled={page === '...'}
+                                style={page === '...' ? { cursor: 'default', background: 'transparent', border: 'none' } : {}}
+                            >
+                                {page}
+                            </button>
+                        ))}
+                        <button onClick={() => setCurrentPage(p => p + 1)} disabled={currentPage === totalPages}>
+                            Next &raquo;
+                        </button>
+                    </div>
+                )}
             </div>
         );
     };
@@ -643,12 +698,10 @@ const ProductsPage = () => {
                     fontSize: '16px',
                 },
             }} reverseOrder={false} />
-            <h2 style={{paddingBottom:"30px"}}>Products</h2>
+            <h2 style={{ paddingBottom: "30px" }}>Products</h2>
 
             <div className="page-header">
-
                 <div className="actions-toolbar">
-                    {/* Group for Search and Selection actions */}
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                         <input
                             type="text"
@@ -661,7 +714,6 @@ const ProductsPage = () => {
 
                         <button
                             type="button"
-                            // Consider using a class like "icon-btn" for specific styling
                             className="btn btn-icon"
                             onClick={handleToggleSelectionMode}
                             title={isSelectionMode ? 'Cancel Selection' : 'Select Multiple'}
@@ -676,60 +728,101 @@ const ProductsPage = () => {
                                 boxShadow: '0 0px 0px var(--shadow-color)'
                             }}
                         >
-                            {isSelectionMode ? <FaTimes size={18} /> : <i className="fa-duotone fa-solid fa-check-double" style={{paddingLeft:"1px", paddingRight: "3px"}}></i>}
+                            {isSelectionMode ? <FaTimes size={18} /> : <i className="fa-duotone fa-solid fa-check-double" style={{ paddingLeft: "1px", paddingRight: "3px" }}></i>}
                         </button>
 
                         {isSelectionMode && selectedProducts.size > 0 && (
-                            <button
-                                type="button"
-                                className="btn btn-danger"
-                                onClick={handleBulkDelete}
-                                style={{ whiteSpace: 'nowrap' }} // Prevents text wrapping
-                            >
-                                Delete Selected ({selectedProducts.size})
-                            </button>
+                            <>
+                                <button
+                                    type="button"
+                                    className="btn btn-danger"
+                                    onClick={handleBulkDelete}
+                                    style={{ whiteSpace: 'nowrap' }}
+                                >
+                                    <i className="fa-duotone fa-solid fa-trash" style={{ marginRight: "5px" }}></i>
+                                    Delete ({selectedProducts.size})
+                                </button>
+
+                                <div style={{ position: 'relative' }}>
+                                    <button
+                                        className="btn"
+                                        onClick={() => setShowGenerateOptions(!showGenerateOptions)}
+                                        style={{ whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', gap: '5px' }}
+                                    >
+                                        <FaBarcode /> Generate Tags <FaChevronDown size={10} />
+                                    </button>
+
+                                    {showGenerateOptions && (
+                                        <div style={{
+                                            position: 'absolute',
+                                            top: '100%',
+                                            left: 0,
+                                            background: 'white',
+                                            border: '1px solid #ddd',
+                                            borderRadius: '8px',
+                                            boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
+                                            zIndex: 1000,
+                                            marginTop: '5px',
+                                            minWidth: '150px',
+                                            overflow: 'hidden'
+                                        }}>
+                                            <div
+                                                onClick={() => handleBulkGenerate('qr')}
+                                                style={{ padding: '10px 15px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', borderBottom: '1px solid #eee' }}
+                                                onMouseEnter={(e) => e.currentTarget.style.background = '#f5f5f5'}
+                                                onMouseLeave={(e) => e.currentTarget.style.background = 'white'}
+                                            >
+                                                <i className="fa-duotone fa-solid fa-qrcode"></i> QR Codes
+                                            </div>
+                                            <div
+                                                onClick={() => handleBulkGenerate('barcode')}
+                                                style={{ padding: '10px 15px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px' }}
+                                                onMouseEnter={(e) => e.currentTarget.style.background = '#f5f5f5'}
+                                                onMouseLeave={(e) => e.currentTarget.style.background = 'white'}
+                                            >
+                                                <i className="fa-duotone fa-solid fa-barcode"></i> Barcodes
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+                            </>
                         )}
                     </div>
 
-
-                    {/* Group for primary actions */}
                     <div className="actions-group-left">
-                        <button type="button" className="btn" onClick={() => setIsModalOpen(true)}><i class="fa-duotone fa-solid fa-grid-2-plus" style={{marginRight: "3px"}}></i>Add Product</button>
+                        <button type="button" className="btn" onClick={() => setIsModalOpen(true)}><i className="fa-duotone fa-solid fa-grid-2-plus" style={{ marginRight: "3px" }}></i>Add Product</button>
                         <PremiumFeature>
-                            <button type="button" className="btn" onClick={() => setIsCsvModalOpen(true)}><i className="fa-duotone fa-solid fa-arrow-up-from-square" style={{marginRight: "5px"}}></i>Upload CSV</button>
-                        </PremiumFeature>                          <button type="button" className="btn" onClick={handleExportCSV}><i class="fa-duotone fa-solid fa-file-export" style={{marginRight: "5px"}}></i>Export CSV</button>
-                       </div>
+                            <button type="button" className="btn" onClick={() => setIsCsvModalOpen(true)}><i className="fa-duotone fa-solid fa-arrow-up-from-square" style={{ marginRight: "5px" }}></i>Upload CSV</button>
+                        </PremiumFeature>
+                        <button type="button" className="btn" onClick={handleExportCSV}><i className="fa-duotone fa-solid fa-file-export" style={{ marginRight: "5px" }}></i>Export CSV</button>
+                    </div>
 
                     <div ref={columnsRef} className="columns-dropdown-container">
-                                 <span
-                                role="button"
-                                tabIndex={0}
-                                onClick={() => setIsColumnsOpen(v => !v)}
-                                onKeyDown={(e) => (e.key === 'Enter' ? setIsColumnsOpen(v => !v) : null)}
-                                aria-expanded={isColumnsOpen}
-                                style={{
-                                    background: "white",
-                                    color: "var(--primary-color)",
-                                    border: "2px solid var(--primary-color-light)",
-                                    borderRadius: "18px",
-                                    padding: "8px 14px",
-                                    cursor: "pointer",
-                                    display: "inline-flex",
-                                    alignItems: "center",
-                                    fontWeight: 500,
-                                    transition: "all 0.3s ease",
-                                    userSelect: "none",
-                                    marginLeft: "auto", // pushes to the far right
-                                }}
-                                onMouseEnter={(e) => {
-                                    e.currentTarget.style.background = "var(--primary-color-light)";
-                                }}
-                                onMouseLeave={(e) => {
-                                    e.currentTarget.style.background = "white";
-                                }}
-                            >
-                                {columnsButtonLabel} ▾
-                            </span>
+                        <span
+                            role="button"
+                            tabIndex={0}
+                            onClick={() => setIsColumnsOpen(v => !v)}
+                            onKeyDown={(e) => (e.key === 'Enter' ? setIsColumnsOpen(v => !v) : null)}
+                            aria-expanded={isColumnsOpen}
+                            style={{
+                                background: "white",
+                                color: "var(--primary-color)",
+                                border: "2px solid var(--primary-color-light)",
+                                borderRadius: "18px",
+                                padding: "8px 14px",
+                                cursor: "pointer",
+                                display: "inline-flex",
+                                alignItems: "center",
+                                fontWeight: 500,
+                                transition: "all 0.3s ease",
+                                userSelect: "none",
+                                marginLeft: "auto",
+                            }}
+                            onMouseEnter={(e) => { e.currentTarget.style.background = "var(--primary-color-light)"; }}
+                            onMouseLeave={(e) => { e.currentTarget.style.background = "white"; }}
+                        >
+                            {columnsButtonLabel} ▾
+                        </span>
 
                         {isColumnsOpen && (
                             <div className="columns-dropdown-menu">
@@ -746,7 +839,6 @@ const ProductsPage = () => {
                                         </label>
                                     ))}
                                 </div>
-
                                 <div className="columns-dropdown-footer">
                                     <button type="button" className="btn small-btn" onClick={() => setVisibleColumns(defaultVisibleColumns)}>Show All</button>
                                     <button type="button" className="btn small-btn" onClick={() => setIsColumnsOpen(false)}>Done</button>
@@ -755,17 +847,24 @@ const ProductsPage = () => {
                         )}
                     </div>
                 </div>
-
             </div>
-
-
 
             <div className="glass-card">
                 <table className="data-table">
                     <thead>
                     <tr>
-                        {/* --- ADDED: Checkbox column header for selection mode --- */}
-                        {isSelectionMode && <th style={{ width: "30px" }}></th>}
+                        {/* --- CHANGED: Insert "Select All" Checkbox here --- */}
+                        {isSelectionMode && (
+                            <th style={{ width: "30px", textAlign: 'center' }}>
+                                <input
+                                    type="checkbox"
+                                    className="styled-checkbox"
+                                    checked={isAllVisibleSelected}
+                                    onChange={handleSelectAll}
+                                    title="Select/Deselect All Visible"
+                                />
+                            </th>
+                        )}
 
                         {visibleColumns.name && (
                             <th style={{ cursor: 'pointer' }} onClick={() => toggleSort('name')}>
@@ -807,6 +906,9 @@ const ProductsPage = () => {
                                 Status {hasSortActive && sortConfig.key === 'status' ? (sortConfig.direction === 'asc' ? ' ▲' : ' ▼') : ''}
                             </th>
                         )}
+                        {visibleColumns.generateTag && (
+                            <th>Generate Tag</th>
+                        )}
                         {visibleColumns.actions && <th>Actions</th>}
                     </tr>
                     </thead>
@@ -840,19 +942,63 @@ const ProductsPage = () => {
                                 {visibleColumns.tax && <td>{product.tax}</td>}
                                 {visibleColumns.stock && <td>{product.stock}</td>}
                                 {visibleColumns.status && <td><span className={product.stock > 0 ? 'status-instock' : 'status-outofstock'}>{product.stock > 0 ? 'In Stock' : 'Out of Stock'}</span></td>}
+
+                                {visibleColumns.generateTag && (
+                                    <td>
+                                        <div className="action-icons">
+                                                <span
+                                                    className="action-icon"
+                                                    title="Generate QR Code"
+                                                    onClick={(e) => { e.stopPropagation(); handleGenerateTags([product], 'qr'); }}
+                                                    style={{
+                                                        cursor: "pointer",
+                                                        borderRadius: "6px",
+                                                        padding: "6px",
+                                                        marginRight: "8px",
+                                                        display: "inline-flex",
+                                                        backgroundColor: "var(--primary-color-light)",
+                                                        alignItems: "center",
+                                                        border: "var(--border-color) solid 1px",
+                                                        justifyContent: "center",
+                                                    }}
+                                                >
+                                                    <i className="fa-duotone fa-solid fa-qrcode"></i>
+                                                </span>
+                                            <span
+                                                className="action-icon"
+                                                title="Generate Barcode"
+                                                onClick={(e) => { e.stopPropagation(); handleGenerateTags([product], 'barcode'); }}
+                                                style={{
+                                                    cursor: "pointer",
+                                                    borderRadius: "6px",
+                                                    padding: "6px",
+                                                    marginRight: "8px",
+                                                    display: "inline-flex",
+                                                    backgroundColor: "var(--primary-color-light)",
+                                                    alignItems: "center",
+                                                    border: "var(--border-color) solid 1px",
+                                                    justifyContent: "center",
+                                                }}
+                                            >
+                                                    <i className="fa-duotone fa-solid fa-barcode"></i>
+                                                </span>
+                                        </div>
+                                    </td>
+                                )}
+
                                 {visibleColumns.actions && (
                                     <td>
                                         <div className="action-icons">
-                            <span
-                                onClick={(e) => {
-                                    e.stopPropagation();
-                                    handleEditClick(product);
-                                }}
-                                className="action-icon edit"
-                                title="Edit Product"
-                            >
-                                <i className="fa-duotone fa-solid fa-pen-to-square"></i>
-                            </span>
+                                                <span
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        handleEditClick(product);
+                                                    }}
+                                                    className="action-icon edit"
+                                                    title="Edit Product"
+                                                >
+                                                    <i className="fa-duotone fa-solid fa-pen-to-square"></i>
+                                                </span>
                                             <span
                                                 onClick={(e) => {
                                                     e.stopPropagation();
@@ -863,8 +1009,8 @@ const ProductsPage = () => {
                                                 className="action-icon delete"
                                                 title="Delete Product"
                                             >
-                                <i className="fa-duotone fa-solid fa-trash"></i>
-                            </span>
+                                                    <i className="fa-duotone fa-solid fa-trash"></i>
+                                                </span>
                                         </div>
                                     </td>
                                 )}
@@ -879,13 +1025,11 @@ const ProductsPage = () => {
 
             <Pagination />
 
-            {/* --- MODALS (Largely Unchanged) --- */}
+            {/* --- MODALS (Unchanged) --- */}
             <Modal title="Add New Product" show={isModalOpen} onClose={() => setIsModalOpen(false)}>
                 <form onSubmit={handleAddProduct}>
-                    {/* Form groups for name, category, costPrice, price, stock, tax */}
                     <div className="form-group"><label>Product Name</label><input type="text" required value={name} onChange={e => setName(e.target.value)} /></div>
-                    <div className="form-group"><label>HSN</label><input type="text"  value={hsn} onChange={e => setHsn(e.target.value)} /></div>
-
+                    <div className="form-group"><label>HSN</label><input type="text" value={hsn} onChange={e => setHsn(e.target.value)} /></div>
                     <div className="form-group"><label>Category</label><select required value={category} onChange={e => setCategory(e.target.value)}><option value="">-- Select --</option><option>Product</option><option>Services</option><option>Others</option></select></div>
                     <div className="form-group"><label>Cost Price</label><input type="number" step="0.01" required value={costPrice} onChange={e => setCostPrice(e.target.value)} /></div>
                     <div className="form-group"><label>Selling Price</label><input type="number" step="0.01" required value={price} onChange={e => setPrice(e.target.value)} /></div>
@@ -899,19 +1043,16 @@ const ProductsPage = () => {
                             <option value="18">18</option>
                             <option value="28">28</option>
                         </select>
-                    </div>                    <div className="form-actions"><button type="submit" className="btn">Add Product</button></div>
+                    </div>
+                    <div className="form-actions"><button type="submit" className="btn">Add Product</button></div>
                 </form>
             </Modal>
 
             <Modal title="Update Product" show={isUpdateModalOpen} onClose={handleCloseUpdateModal}>
                 <form onSubmit={handleUpdateProduct}>
-                    {/* Form groups for name, category, costPrice, price, stock, tax */}
                     <div className="form-group"><label>Product Name</label><input type="text" required value={name} onChange={e => setName(e.target.value)} /></div>
-                    <div className="form-group"><label>HSN</label><input type="text"  value={hsn} onChange={e => setHsn(e.target.value)} /></div>
-
+                    <div className="form-group"><label>HSN</label><input type="text" value={hsn} onChange={e => setHsn(e.target.value)} /></div>
                     <div className="form-group"><label>Category</label><select required value={category} onChange={e => setCategory(e.target.value)}><option value="">-- Select --</option><option>Product</option><option>Services</option><option>Others</option></select></div>
-
-
                     <div className="form-group"><label>Cost Price</label><input type="number" step="0.01" required value={costPrice} onChange={e => setCostPrice(e.target.value)} /></div>
                     <div className="form-group"><label>Selling Price</label><input type="number" step="0.01" required value={price} onChange={e => setPrice(e.target.value)} /></div>
                     <div className="form-group"><label>Stock Quantity</label><input type="number" required value={stock} onChange={e => setStock(e.target.value)} /></div>
@@ -923,24 +1064,20 @@ const ProductsPage = () => {
                             <option value="12">12</option>
                             <option value="18">18</option>
                             <option value="28">28</option>
-
                             {!currentTaxIsStandard && tax != null && tax !== '' && (
                                 <option value={tax}>{tax}% (Current)</option>
                             )}
                         </select>
-                    </div>                    <div className="form-actions"><button type="submit" className="btn">Update Product</button></div>
+                    </div>
+                    <div className="form-actions"><button type="submit" className="btn">Update Product</button></div>
                 </form>
             </Modal>
 
             <Modal title="Upload Products via CSV" show={isCsvModalOpen} onClose={() => setIsCsvModalOpen(false)}>
                 <form onSubmit={handleCsvSubmit}>
                     <div className="form-group">
-
-                        {/* --- NEW: Label with Info Icon --- */}
                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '10px' }}>
                             <label style={{ margin: 0, fontWeight: 'bold' }}>CSV file</label>
-
-                            {/* --- REQUEST 2: Info Icon & Tooltip --- */}
                             <div className="info-tooltip-container">
                                 <FaInfoCircle style={{ color: 'var(--primary-color)', cursor: 'pointer', fontSize: '1.1rem' }} />
                                 <div className="info-tooltip-text">
@@ -952,59 +1089,41 @@ const ProductsPage = () => {
                                         <li>Enter 'Product', 'Service' or 'Others' in Category.</li>
                                         <li>Try to keep Cost Price lower than the Selling Price.</li>
                                         <li>Always give valid tax percent (e.g., 0, 5, 12, 18, 28).</li>
-                                        <li>If not sure, take a look at the 'Add Product' popup for reference.</li>
                                     </ul>
                                 </div>
                             </div>
-                            {/* --- End Request 2 --- */}
                         </div>
 
                         <input type="file" accept=".csv,text/csv" onChange={handleCsvChange} required />
                         {csvFile && (<small>Selected: {csvFile.name} ({Math.round(csvFile.size / 1024)} KB)</small>)}
                         {uploadError && (<div className="error">{uploadError}</div>)}
 
-                        {/* --- REQUEST 1: Download Template Button --- */}
                         <button
                             type="button"
                             className="btn small-btn"
                             onClick={handleDownloadTemplate}
                             style={{
                                 marginTop: '15px',
-
                                 alignItems: 'start',
                                 gap: '5px',
                                 background: 'var(--primary-color-light)',
                                 color: 'var(--primary-color)',
                                 border: '1px solid var(--primary-color)',
-                                width: '30%',        /* Prevents stretching */
-                                padding: '6px 12px',  /* Makes it smaller */
+                                width: '30%',
+                                padding: '6px 12px',
                                 fontSize: '0.9em'
                             }}
                         >
                             <FaDownload />Template
                         </button>
-                        {/* --- End Request 1 --- */}
-
-                        <div className="help-text" style={{marginTop: "15px", fontWeight: "bold", fontSize: "0.9em"}}>
+                        <div className="help-text" style={{ marginTop: "15px", fontWeight: "bold", fontSize: "0.9em" }}>
                             Required Headers: selectedProductId, name, hsn, category, costPrice, price, stock, tax.
                         </div>
                     </div>
 
                     <div className="form-actions" style={{ display: "flex", gap: "10px", marginTop: '25px' }}>
-                        <button
-                            type="button"
-                            className="btn btn-danger"
-                            onClick={() => setIsCsvModalOpen(false)}
-                        >
-                            Cancel
-                        </button>
-                        <button
-                            type="submit"
-                            className="btn"
-                            disabled={!csvFile || isUploading}
-                        >
-                            {isUploading ? "Uploading…" : "Upload"}
-                        </button>
+                        <button type="button" className="btn btn-danger" onClick={() => setIsCsvModalOpen(false)}>Cancel</button>
+                        <button type="submit" className="btn" disabled={!csvFile || isUploading}>{isUploading ? "Uploading…" : "Upload"}</button>
                     </div>
                 </form>
             </Modal>
@@ -1013,5 +1132,3 @@ const ProductsPage = () => {
 };
 
 export default ProductsPage;
-
-// Recommended CSS for Pagination and other new elements:
