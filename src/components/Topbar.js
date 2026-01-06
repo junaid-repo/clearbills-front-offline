@@ -13,6 +13,11 @@ import {
 import "./Topbar.css"
 import { useConfig } from "../pages/ConfigProvider";
 import { useSearchKey } from "../context/SearchKeyContext";
+import Modal from '../components/Modal'; // Import Modal
+import toast from 'react-hot-toast'; // Import Toast for feedback
+
+// --- IMPORT SCANNER ---
+import { Html5Qrcode, Html5QrcodeSupportedFormats } from 'html5-qrcode';
 
 // --- Debounce Hook (Existing) ---
 const useDebounce = (value, delay) => {
@@ -53,6 +58,10 @@ const Topbar = ({ onLogout, theme, toggleTheme, setSelectedPage, isCollapsed, to
     const [isDropdownVisible, setIsDropdownVisible] = useState(false);
     const debouncedSearchTerm = useDebounce(globalSearchTerm, 300);
     const searchDropdownRef = useRef(null);
+
+    // --- SCANNER STATE (New) ---
+    const [isScannerOpen, setIsScannerOpen] = useState(false);
+    const scannerRef = useRef(null);
 
     // 2. --- NEW: Logic copied from Sidebar.js to color the toggle button ---
     const [isDark, setIsDark] = useState(() =>
@@ -192,6 +201,89 @@ const Topbar = ({ onLogout, theme, toggleTheme, setSelectedPage, isCollapsed, to
     }, [notifDropdownOpen, isUserDropdownOpen, isDropdownVisible]);
 
 
+    // --- SCANNER LOGIC (Optimized) ---
+    useEffect(() => {
+        let html5QrCode;
+
+        if (isScannerOpen) {
+            // Small delay to ensure Modal DOM is ready
+            const timer = setTimeout(() => {
+                html5QrCode = new Html5Qrcode("reader");
+                scannerRef.current = html5QrCode;
+
+                const config = {
+                    fps: 10,
+                    qrbox: { width: 350, height: 210 },
+                    aspectRatio: 1.0,
+                    formatsToSupport: [
+                        Html5QrcodeSupportedFormats.QR_CODE,
+                        Html5QrcodeSupportedFormats.CODE_128,
+                        Html5QrcodeSupportedFormats.EAN_13,
+                        Html5QrcodeSupportedFormats.UPC_A
+                    ]
+                };
+
+                html5QrCode.start(
+                    { facingMode: "environment" },
+                    config,
+                    (decodedText) => {
+                        // SUCCESS: Stop camera immediately
+                        html5QrCode.stop().then(() => {
+                            html5QrCode.clear();
+                            setIsScannerOpen(false);
+
+                            // SET THE SEARCH TERM -> This triggers the existing Debounce & API logic
+                            setGlobalSearchTerm(decodedText);
+                            toast.success("Code scanned!");
+                        }).catch(err => {
+                            console.error("Failed to stop after scan", err);
+                            setIsScannerOpen(false);
+                            setGlobalSearchTerm(decodedText);
+                        });
+                    },
+                    (errorMessage) => { /* ignore scan errors */ }
+                ).catch(err => {
+                    console.error("Error starting camera", err);
+                    toast.error("Could not start camera.");
+                    setIsScannerOpen(false);
+                });
+            }, 100);
+
+            return () => clearTimeout(timer);
+        }
+
+        // Cleanup
+        return () => {
+            if (scannerRef.current) {
+                try {
+                    if (scannerRef.current.isScanning) {
+                        scannerRef.current.stop().catch(e => console.warn(e));
+                    }
+                    scannerRef.current.clear();
+                } catch (e) { /* ignore */ }
+                scannerRef.current = null;
+            }
+        };
+    }, [isScannerOpen]);
+
+    // Helper to safely close scanner
+    const handleCloseScanner = () => {
+        if (scannerRef.current) {
+            scannerRef.current.stop()
+                .then(() => {
+                    scannerRef.current.clear();
+                    setIsScannerOpen(false);
+                })
+                .catch((err) => {
+                    console.warn("Scanner stop error:", err);
+                    setIsScannerOpen(false);
+                });
+        } else {
+            setIsScannerOpen(false);
+        }
+    };
+
+
     // --- Original Handlers (handleLogout, getRelativeTime, etc.) ---
     const handleLogout = async () => {
         if (!window.confirm("Do you really want to log out?")) return;
@@ -258,10 +350,21 @@ const Topbar = ({ onLogout, theme, toggleTheme, setSelectedPage, isCollapsed, to
     };
 
     // 3. --- UPDATED JSX STRUCTURE ---
-    // Remove inline styles and the 'topbar-spacer' div
-    // Add 3-column layout: topbar-left, topbar-center, topbar-right
     return (
         <header className="topbar">
+            {/* --- INJECT STYLES FOR SCANNER --- */}
+            <style>
+                {`
+                    #reader__dashboard_section_csr span { display: none !important; }
+                    #reader__dashboard_section_csr select {
+                        padding: 6px;
+                        border-radius: 4px;
+                        border: 1px solid #ddd;
+                        margin-bottom: 10px;
+                        outline: none;
+                    }
+                `}
+            </style>
 
             {/* --- NEW: TOPBAR LEFT (Toggle + Logo) --- */}
             <div className="topbar-left">
@@ -337,9 +440,29 @@ const Topbar = ({ onLogout, theme, toggleTheme, setSelectedPage, isCollapsed, to
                         onFocus={() => {
                             if (searchResults.length > 0) setIsDropdownVisible(true);
                         }}
-                        // --- CHANGE 2: Added title attribute ---
+                        style={{ paddingRight: '35px' }} // Make room for icon
                         title="Enter at least 3 characters to start search"
                     />
+
+                    {/* --- NEW SCANNER ICON --- */}
+                    <span
+                        onClick={() => setIsScannerOpen(true)}
+                        title="Scan Code"
+                        style={{
+                            position: 'absolute',
+                            right: '12px',
+                            top: '50%',
+                            transform: 'translateY(-50%)',
+                            cursor: 'pointer',
+                            zIndex: 10,
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center'
+                        }}
+                    >
+                        <i className="fa-duotone fa-solid fa-barcode-read" style={{fontSize: "20px", color: "var(--text-color)"}}></i>
+                    </span>
+
                     {isDropdownVisible && (
                         <div className="search-results-dropdown">
                             {isSearchLoading ? (
@@ -500,7 +623,6 @@ const Topbar = ({ onLogout, theme, toggleTheme, setSelectedPage, isCollapsed, to
                                     top: "100%",
                                     right: 0,
                                     background: "var(--background-color)",
-                                    // ... (rest of inline styles)
                                     boxShadow: "0 4px 12px rgba(0,0,0,0.1)",
                                     borderRadius: "25px",
                                     marginTop: "6px",
@@ -550,6 +672,14 @@ const Topbar = ({ onLogout, theme, toggleTheme, setSelectedPage, isCollapsed, to
                     </div>
                 </div>
             </div>
+
+            {/* --- SCANNER MODAL --- */}
+            <Modal title="Scan Barcode/QR" show={isScannerOpen} onClose={handleCloseScanner}>
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '10px' }}>
+                    <div id="reader" style={{ width: '100%', maxWidth: '500px', minHeight: '300px' }}></div>
+                    <p style={{ marginTop: '10px', color: '#666', fontSize: '0.9rem' }}>Align code within the box</p>
+                </div>
+            </Modal>
         </header>);
 };
 

@@ -5,7 +5,10 @@ import { useConfig } from "./ConfigProvider";
 import { useLocation } from 'react-router-dom';
 import { useSearchKey } from '../context/SearchKeyContext';
 import toast, { Toaster } from 'react-hot-toast';
-import { FaInfoCircle, FaDownload, FaTimes, FaChevronDown, FaBarcode } from 'react-icons/fa';
+import {
+    FaInfoCircle, FaDownload, FaTimes, FaChevronDown,
+    FaBarcode, FaQrcode
+} from 'react-icons/fa';
 import { useAlert } from '../context/AlertContext';
 import PremiumFeature from '../components/PremiumFeature';
 
@@ -13,6 +16,9 @@ import PremiumFeature from '../components/PremiumFeature';
 import jsPDF from 'jspdf';
 import QRCode from 'qrcode';
 import JsBarcode from 'jsbarcode';
+
+// --- IMPORT SCANNER ---
+import { Html5Qrcode, Html5QrcodeSupportedFormats } from 'html5-qrcode';
 
 /**
  * Custom hook to debounce a value.
@@ -38,6 +44,12 @@ const ProductsPage = () => {
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [isUpdateModalOpen, setIsUpdateModalOpen] = useState(false);
     const [isCsvModalOpen, setIsCsvModalOpen] = useState(false);
+
+    // --- SCANNER STATE ---
+    const [isScannerOpen, setIsScannerOpen] = useState(false);
+    const [scannedProduct, setScannedProduct] = useState(null);
+    const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
+    const scannerRef = useRef(null);
 
     // Form State
     const [name, setName] = useState("");
@@ -68,7 +80,6 @@ const ProductsPage = () => {
     // Selection Mode
     const [isSelectionMode, setIsSelectionMode] = useState(false);
     const [selectedProducts, setSelectedProducts] = useState(new Set());
-    // State for bulk generate dropdown
     const [showGenerateOptions, setShowGenerateOptions] = useState(false);
 
     const debouncedSearchTerm = useDebounce(searchTerm, 500);
@@ -78,17 +89,9 @@ const ProductsPage = () => {
     const columnsRef = useRef(null);
     const [isColumnsOpen, setIsColumnsOpen] = useState(false);
     const defaultVisibleColumns = {
-        id: true,
-        name: true,
-        category: true,
-        hsn: true,
-        costPrice: true,
-        price: true,
-        tax: true,
-        stock: true,
-        status: true,
-        generateTag: true,
-        actions: true
+        id: true, name: true, category: true, hsn: true,
+        costPrice: true, price: true, tax: true, stock: true,
+        status: true, generateTag: true, actions: true
     };
 
     const [visibleColumns, setVisibleColumns] = useState(() => {
@@ -197,6 +200,119 @@ const ProductsPage = () => {
             setSearchKey('');
         };
     }, [setSearchKey]);
+
+    // --- SCANNER LOGIC ---
+    useEffect(() => {
+        let html5QrCode;
+
+        if (isScannerOpen) {
+            // Small delay to ensure Modal DOM is ready
+            const timer = setTimeout(() => {
+                html5QrCode = new Html5Qrcode("reader");
+                scannerRef.current = html5QrCode;
+
+                const config = {
+                    fps: 10,
+                    qrbox: { width: 350, height: 210 },
+                    aspectRatio: 1.0,
+                    formatsToSupport: [
+                        Html5QrcodeSupportedFormats.QR_CODE,
+                        Html5QrcodeSupportedFormats.CODE_128,
+                        Html5QrcodeSupportedFormats.EAN_13,
+                        Html5QrcodeSupportedFormats.UPC_A
+                    ]
+                };
+
+                html5QrCode.start(
+                    { facingMode: "environment" },
+                    config,
+                    (decodedText) => {
+                        // SUCCESS: Stop camera immediately, then handle data
+                        html5QrCode.stop().then(() => {
+                            html5QrCode.clear();
+                            setIsScannerOpen(false);
+                            handleScanSuccess(decodedText);
+                        }).catch(err => {
+                            console.error("Failed to stop after scan", err);
+                            setIsScannerOpen(false);
+                            handleScanSuccess(decodedText);
+                        });
+                    },
+                    (errorMessage) => {
+                        // ignore scan errors
+                    }
+                ).catch(err => {
+                    console.error("Error starting camera", err);
+                    toast.error("Could not start camera.");
+                    setIsScannerOpen(false);
+                });
+            }, 100);
+
+            return () => clearTimeout(timer);
+        }
+
+        // Cleanup fallback: simple clear if component unmounts
+        return () => {
+            if (scannerRef.current) {
+                try {
+                    if (scannerRef.current.isScanning) {
+                        scannerRef.current.stop().catch(e => console.warn(e));
+                    }
+                    scannerRef.current.clear();
+                } catch (e) { /* ignore */ }
+                scannerRef.current = null;
+            }
+        };
+    }, [isScannerOpen]);
+
+    // --- HELPER: Safely stop scanner before closing modal ---
+    const handleCloseScanner = () => {
+        if (scannerRef.current) {
+            // Attempt to stop the scanner
+            scannerRef.current.stop()
+                .then(() => {
+                    // Once stopped, clear and close modal
+                    scannerRef.current.clear();
+                    setIsScannerOpen(false);
+                })
+                .catch((err) => {
+                    // If error (e.g. wasn't running), force close anyway
+                    console.warn("Scanner stop error:", err);
+                    setIsScannerOpen(false);
+                });
+        } else {
+            setIsScannerOpen(false);
+        }
+    };
+
+    const handleScanSuccess = async (decodedText) => {
+        toast.loading(`Scanning ${decodedText}...`, { id: 'scanLoader' });
+        try {
+            const url = new URL(`${apiUrl}/api/shop/get/withCache/productsList`);
+            url.searchParams.append('page', 1);
+            url.searchParams.append('limit', 1);
+            url.searchParams.append('search', decodedText);
+
+            const response = await fetch(url, { method: "GET", credentials: 'include' });
+            const result = await response.json();
+
+            toast.dismiss('scanLoader');
+
+            if (result.data && result.data.length > 0) {
+                const foundProduct = result.data[0];
+                setScannedProduct(foundProduct);
+                setIsDetailsModalOpen(true);
+                toast.success("Product found!");
+            } else {
+                toast.error(`Product "${decodedText}" not found.`);
+            }
+
+        } catch (error) {
+            toast.dismiss('scanLoader');
+            toast.error("Error searching for product.");
+            console.error(error);
+        }
+    };
 
     // --- PDF GENERATION LOGIC ---
     const handleGenerateTags = async (productList, type) => {
@@ -351,14 +467,8 @@ const ProductsPage = () => {
     };
 
     const resetForm = () => {
-        setName("");
-        setHsn("");
-        setCategory("");
-        setPrice("");
-        setStock("");
-        setTax("");
-        setCostPrice("");
-        setSelectedProductId(null);
+        setName(""); setHsn(""); setCategory(""); setPrice("");
+        setStock(""); setTax(""); setCostPrice(""); setSelectedProductId(null);
     };
 
     const handleCloseUpdateModal = () => {
@@ -371,8 +481,7 @@ const ProductsPage = () => {
         try {
             const payload = { name, category, price, costPrice, stock, tax, hsn };
             const response = await fetch(`${apiUrl}/api/shop/create/product`, {
-                method: "POST",
-                credentials: 'include',
+                method: "POST", credentials: 'include',
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify(payload),
             });
@@ -392,8 +501,7 @@ const ProductsPage = () => {
         try {
             const payload = { selectedProductId, name, category, price, costPrice, stock, tax, hsn };
             const response = await fetch(`${apiUrl}/api/shop/update/product`, {
-                method: "PUT",
-                credentials: 'include',
+                method: "PUT", credentials: 'include',
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify(payload),
             });
@@ -413,8 +521,7 @@ const ProductsPage = () => {
         if (window.confirm("Are you sure you want to delete this product?")) {
             try {
                 const response = await fetch(`${apiUrl}/api/shop/product/delete/${id}`, {
-                    method: "DELETE",
-                    credentials: 'include'
+                    method: "DELETE", credentials: 'include'
                 });
                 if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
                 toast.error('Product deleted successfully!');
@@ -430,12 +537,9 @@ const ProductsPage = () => {
     const handleDeleteProductBulk = async (id) => {
         try {
             const response = await fetch(`${apiUrl}/api/shop/product/delete/${id}`, {
-                method: "DELETE",
-                credentials: 'include'
+                method: "DELETE", credentials: 'include'
             });
-            if (!response.ok) {
-                throw new Error(`Failed to delete product ID ${id}`);
-            }
+            if (!response.ok) throw new Error(`Failed to delete product ID ${id}`);
             return { success: true, id };
         } catch (error) {
             console.error("Error deleting product:", error);
@@ -452,25 +556,19 @@ const ProductsPage = () => {
     const handleSelectProduct = (productId) => {
         setSelectedProducts(prevSelected => {
             const newSelected = new Set(prevSelected);
-            if (newSelected.has(productId)) {
-                newSelected.delete(productId);
-            } else {
-                newSelected.add(productId);
-            }
+            if (newSelected.has(productId)) { newSelected.delete(productId); }
+            else { newSelected.add(productId); }
             return newSelected;
         });
     };
 
-    // --- NEW: Handle Select All Visible Rows ---
     const isAllVisibleSelected = products.length > 0 && products.every(p => selectedProducts.has(p.id));
 
     const handleSelectAll = () => {
         const newSelected = new Set(selectedProducts);
         if (isAllVisibleSelected) {
-            // Deselect visible
             products.forEach(p => newSelected.delete(p.id));
         } else {
-            // Select visible
             products.forEach(p => newSelected.add(p.id));
         }
         setSelectedProducts(newSelected);
@@ -504,9 +602,7 @@ const ProductsPage = () => {
             const formData = new FormData();
             formData.append('file', csvFile);
             const res = await fetch(`${apiUrl}/api/shop/bulk-upload`, {
-                method: 'POST',
-                credentials: 'include',
-                body: formData,
+                method: 'POST', credentials: 'include', body: formData,
             });
             if (!res.ok) {
                 const errorText = await res.text();
@@ -525,14 +621,9 @@ const ProductsPage = () => {
     };
 
     const handleExportCSV = async () => {
-        if (totalProducts === 0) {
-            showAlert("No products to export.");
-            return;
-        }
+        if (totalProducts === 0) { showAlert("No products to export."); return; }
 
-        if (!window.confirm(`Do you want to export all products to CSV?`)) {
-            return;
-        }
+        if (!window.confirm(`Do you want to export all products to CSV?`)) { return; }
 
         try {
             const url = `${apiUrl}/api/shop/export/products`;
@@ -543,9 +634,7 @@ const ProductsPage = () => {
                 try {
                     const errorData = await response.json();
                     errorText = errorData.message || JSON.stringify(errorData);
-                } catch (e) {
-                    errorText = await response.text();
-                }
+                } catch (e) { errorText = await response.text(); }
                 throw new Error(errorText);
             }
 
@@ -573,16 +662,10 @@ const ProductsPage = () => {
         if (file) {
             const isCsv = file.type === 'text/csv' || /\.csv$/i.test(file.name);
             const maxBytes = 5 * 1024 * 1024; // 5MB
-            if (!isCsv) {
-                setUploadError('Please select a .csv file.');
-            } else if (file.size > maxBytes) {
-                setUploadError('File must be 5 MB or less.');
-            } else {
-                setCsvFile(file);
-            }
-        } else {
-            setCsvFile(null);
-        }
+            if (!isCsv) { setUploadError('Please select a .csv file.'); }
+            else if (file.size > maxBytes) { setUploadError('File must be 5 MB or less.'); }
+            else { setCsvFile(file); }
+        } else { setCsvFile(null); }
     };
 
     const toggleSort = (key) => {
@@ -631,54 +714,25 @@ const ProductsPage = () => {
 
         return (
             <div className="pagination" style={{
-                position: 'relative',
-                display: 'flex',
-                justifyContent: 'center',
-                alignItems: 'center',
-                marginTop: '20px',
-                minHeight: '40px'
+                position: 'relative', display: 'flex', justifyContent: 'center', alignItems: 'center', marginTop: '20px', minHeight: '40px'
             }}>
                 <div style={{ position: 'absolute', left: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
                     <span className="select-wrapper">Rows:</span>
-
                     <select
                         value={itemsPerPage}
                         onChange={(e) => setItemsPerPage(Number(e.target.value))}
-                        style={{
-                            padding: '4px 8px',
-                            borderRadius: '6px',
-                            border: '1px solid var(--primary-color-light)',
-                            backgroundColor: 'white',
-                            outline: 'none',
-                            cursor: 'pointer',
-                            fontSize: '0.9rem'
-                        }}
+                        style={{ padding: '4px 8px', borderRadius: '6px', border: '1px solid var(--primary-color-light)', backgroundColor: 'white', outline: 'none', cursor: 'pointer', fontSize: '0.9rem' }}
                     >
-                        {[10, 20, 30, 50, 100].map(num => (
-                            <option key={num} value={num}>{num}</option>
-                        ))}
+                        {[10, 20, 30, 50, 100].map(num => (<option key={num} value={num}>{num}</option>))}
                     </select>
                 </div>
-
                 {totalPages > 1 && (
                     <div className="pagination-controls">
-                        <button onClick={() => setCurrentPage(p => p - 1)} disabled={currentPage === 1}>
-                            &laquo; Prev
-                        </button>
+                        <button onClick={() => setCurrentPage(p => p - 1)} disabled={currentPage === 1}>&laquo; Prev</button>
                         {getPaginationItems().map((page, index) => (
-                            <button
-                                key={index}
-                                onClick={() => typeof page === 'number' && setCurrentPage(page)}
-                                className={currentPage === page ? 'active' : ''}
-                                disabled={page === '...'}
-                                style={page === '...' ? { cursor: 'default', background: 'transparent', border: 'none' } : {}}
-                            >
-                                {page}
-                            </button>
+                            <button key={index} onClick={() => typeof page === 'number' && setCurrentPage(page)} className={currentPage === page ? 'active' : ''} disabled={page === '...'} style={page === '...' ? { cursor: 'default', background: 'transparent', border: 'none' } : {}}>{page}</button>
                         ))}
-                        <button onClick={() => setCurrentPage(p => p + 1)} disabled={currentPage === totalPages}>
-                            Next &raquo;
-                        </button>
+                        <button onClick={() => setCurrentPage(p => p + 1)} disabled={currentPage === totalPages}>Next &raquo;</button>
                     </div>
                 )}
             </div>
@@ -687,30 +741,87 @@ const ProductsPage = () => {
 
     return (
         <div className="page-container">
+            {/* --- INJECT STYLES FOR SCANNER --- */}
+            <style>
+                {`
+                    /* Hide the library specific anchors usually */
+                    #reader__dashboard_section_csr span { display: none !important; }
+                    
+                    /* Style the Start Scanning button */
+                    #html5-qrcode-button-camera-start {
+                        background-color: var(--primary-color) !important;
+                        color: white !important;
+                        border: none !important;
+                        padding: 8px 16px !important;
+                        border-radius: 6px !important;
+                        cursor: pointer !important;
+                        font-weight: 500 !important;
+                        margin-top: 10px;
+                    }
+
+                    /* Style the Stop Scanning button */
+                    #html5-qrcode-button-camera-stop {
+                        background-color: #e53e3e !important;
+                        color: white !important;
+                        border: none !important;
+                        padding: 8px 16px !important;
+                        border-radius: 6px !important;
+                        cursor: pointer !important;
+                        font-weight: 500 !important;
+                        margin-top: 10px;
+                    }
+
+                    /* Style the camera selection dropdown */
+                    #reader__dashboard_section_csr select {
+                        padding: 6px;
+                        border-radius: 4px;
+                        border: 1px solid #ddd;
+                        margin-bottom: 10px;
+                        outline: none;
+                    }
+                `}
+            </style>
+
             <Toaster position="top-center" toastOptions={{
                 duration: 2000,
-                style: {
-                    background: 'lightgreen',
-                    color: 'var(--text-color)',
-                    borderRadius: '25px',
-                    padding: '12px',
-                    width: '3500px',
-                    fontSize: '16px',
-                },
+                style: { background: 'lightgreen', color: 'var(--text-color)', borderRadius: '25px', padding: '12px', width: '3500px', fontSize: '16px' },
             }} reverseOrder={false} />
             <h2 style={{ paddingBottom: "30px" }}>Products</h2>
 
             <div className="page-header">
                 <div className="actions-toolbar">
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <input
-                            type="text"
-                            placeholder="Search products..."
-                            className="search-bar"
-                            value={searchTerm}
-                            style={{ marginBottom: "0px", marginRight: "60px" }}
-                            onChange={(e) => setSearchTerm(e.target.value)}
-                        />
+
+                        {/* --- SEARCH BAR WITH EMBEDDED SCANNER ICON --- */}
+                        <div style={{ position: 'relative', marginRight: "60px", display: 'inline-block' }}>
+                            <input
+                                type="text"
+                                placeholder="Search products..."
+                                className="search-bar"
+                                value={searchTerm}
+                                style={{
+                                    marginBottom: "0px",
+                                    paddingRight: "40px", // Make space for the icon
+                                    width: "250px"
+                                }}
+                                onChange={(e) => setSearchTerm(e.target.value)}
+                            />
+                            <span
+                                onClick={() => setIsScannerOpen(true)}
+                                title="Open QR/Barcode Scanner"
+                                style={{
+                                    position: 'absolute',
+                                    right: '10px',
+                                    top: '50%',
+                                    transform: 'translateY(-50%)',
+                                    cursor: 'pointer',
+                                    display: 'flex',
+                                    alignItems: 'center'
+                                }}
+                            >
+                                <i className="fa-duotone fa-barcode-read"></i>
+                            </span>
+                        </div>
 
                         <button
                             type="button"
@@ -718,14 +829,7 @@ const ProductsPage = () => {
                             onClick={handleToggleSelectionMode}
                             title={isSelectionMode ? 'Cancel Selection' : 'Select Multiple'}
                             style={{
-                                width: '80px',
-                                height: '40px',
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                padding: 0,
-                                borderColor: 'var(--primary-color)',
-                                boxShadow: '0 0px 0px var(--shadow-color)'
+                                width: '80px', height: '40px', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0, borderColor: 'var(--primary-color)', boxShadow: '0 0px 0px var(--shadow-color)'
                             }}
                         >
                             {isSelectionMode ? <FaTimes size={18} /> : <i className="fa-duotone fa-solid fa-check-double" style={{ paddingLeft: "1px", paddingRight: "3px" }}></i>}
@@ -733,53 +837,20 @@ const ProductsPage = () => {
 
                         {isSelectionMode && selectedProducts.size > 0 && (
                             <>
-                                <button
-                                    type="button"
-                                    className="btn btn-danger"
-                                    onClick={handleBulkDelete}
-                                    style={{ whiteSpace: 'nowrap' }}
-                                >
-                                    <i className="fa-duotone fa-solid fa-trash" style={{ marginRight: "5px" }}></i>
-                                    Delete ({selectedProducts.size})
+                                <button type="button" className="btn btn-danger" onClick={handleBulkDelete} style={{ whiteSpace: 'nowrap' }}>
+                                    <i className="fa-duotone fa-solid fa-trash" style={{ marginRight: "5px" }}></i>Delete ({selectedProducts.size})
                                 </button>
 
                                 <div style={{ position: 'relative' }}>
-                                    <button
-                                        className="btn"
-                                        onClick={() => setShowGenerateOptions(!showGenerateOptions)}
-                                        style={{ whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', gap: '5px' }}
-                                    >
+                                    <button className="btn" onClick={() => setShowGenerateOptions(!showGenerateOptions)} style={{ whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', gap: '5px' }}>
                                         <FaBarcode /> Generate Tags <FaChevronDown size={10} />
                                     </button>
-
                                     {showGenerateOptions && (
-                                        <div style={{
-                                            position: 'absolute',
-                                            top: '100%',
-                                            left: 0,
-                                            background: 'white',
-                                            border: '1px solid #ddd',
-                                            borderRadius: '8px',
-                                            boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
-                                            zIndex: 1000,
-                                            marginTop: '5px',
-                                            minWidth: '150px',
-                                            overflow: 'hidden'
-                                        }}>
-                                            <div
-                                                onClick={() => handleBulkGenerate('qr')}
-                                                style={{ padding: '10px 15px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', borderBottom: '1px solid #eee' }}
-                                                onMouseEnter={(e) => e.currentTarget.style.background = '#f5f5f5'}
-                                                onMouseLeave={(e) => e.currentTarget.style.background = 'white'}
-                                            >
+                                        <div style={{ position: 'absolute', top: '100%', left: 0, background: 'white', border: '1px solid #ddd', borderRadius: '8px', boxShadow: '0 4px 12px rgba(0,0,0,0.1)', zIndex: 1000, marginTop: '5px', minWidth: '150px', overflow: 'hidden' }}>
+                                            <div onClick={() => handleBulkGenerate('qr')} style={{ padding: '10px 15px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', borderBottom: '1px solid #eee' }} onMouseEnter={(e) => e.currentTarget.style.background = '#f5f5f5'} onMouseLeave={(e) => e.currentTarget.style.background = 'white'}>
                                                 <i className="fa-duotone fa-solid fa-qrcode"></i> QR Codes
                                             </div>
-                                            <div
-                                                onClick={() => handleBulkGenerate('barcode')}
-                                                style={{ padding: '10px 15px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px' }}
-                                                onMouseEnter={(e) => e.currentTarget.style.background = '#f5f5f5'}
-                                                onMouseLeave={(e) => e.currentTarget.style.background = 'white'}
-                                            >
+                                            <div onClick={() => handleBulkGenerate('barcode')} style={{ padding: '10px 15px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px' }} onMouseEnter={(e) => e.currentTarget.style.background = '#f5f5f5'} onMouseLeave={(e) => e.currentTarget.style.background = 'white'}>
                                                 <i className="fa-duotone fa-solid fa-barcode"></i> Barcodes
                                             </div>
                                         </div>
@@ -798,43 +869,15 @@ const ProductsPage = () => {
                     </div>
 
                     <div ref={columnsRef} className="columns-dropdown-container">
-                        <span
-                            role="button"
-                            tabIndex={0}
-                            onClick={() => setIsColumnsOpen(v => !v)}
-                            onKeyDown={(e) => (e.key === 'Enter' ? setIsColumnsOpen(v => !v) : null)}
-                            aria-expanded={isColumnsOpen}
-                            style={{
-                                background: "white",
-                                color: "var(--primary-color)",
-                                border: "2px solid var(--primary-color-light)",
-                                borderRadius: "18px",
-                                padding: "8px 14px",
-                                cursor: "pointer",
-                                display: "inline-flex",
-                                alignItems: "center",
-                                fontWeight: 500,
-                                transition: "all 0.3s ease",
-                                userSelect: "none",
-                                marginLeft: "auto",
-                            }}
-                            onMouseEnter={(e) => { e.currentTarget.style.background = "var(--primary-color-light)"; }}
-                            onMouseLeave={(e) => { e.currentTarget.style.background = "white"; }}
-                        >
+                        <span role="button" tabIndex={0} onClick={() => setIsColumnsOpen(v => !v)} onKeyDown={(e) => (e.key === 'Enter' ? setIsColumnsOpen(v => !v) : null)} aria-expanded={isColumnsOpen} style={{ background: "white", color: "var(--primary-color)", border: "2px solid var(--primary-color-light)", borderRadius: "18px", padding: "8px 14px", cursor: "pointer", display: "inline-flex", alignItems: "center", fontWeight: 500, transition: "all 0.3s ease", userSelect: "none", marginLeft: "auto" }} onMouseEnter={(e) => { e.currentTarget.style.background = "var(--primary-color-light)"; }} onMouseLeave={(e) => { e.currentTarget.style.background = "white"; }}>
                             {columnsButtonLabel} ▾
                         </span>
-
                         {isColumnsOpen && (
                             <div className="columns-dropdown-menu">
                                 <div className="columns-list">
                                     {Object.keys(visibleColumns).map(col => (
                                         <label key={col} className="column-item">
-                                            <input
-                                                type="checkbox"
-                                                className="styled-checkbox"
-                                                checked={visibleColumns[col]}
-                                                onChange={() => toggleColumn(col)}
-                                            />
+                                            <input type="checkbox" className="styled-checkbox" checked={visibleColumns[col]} onChange={() => toggleColumn(col)} />
                                             <span>{col.replace(/([A-Z])/g, ' $1')}</span>
                                         </label>
                                     ))}
@@ -853,62 +896,20 @@ const ProductsPage = () => {
                 <table className="data-table">
                     <thead>
                     <tr>
-                        {/* --- CHANGED: Insert "Select All" Checkbox here --- */}
                         {isSelectionMode && (
                             <th style={{ width: "30px", textAlign: 'center' }}>
-                                <input
-                                    type="checkbox"
-                                    className="styled-checkbox"
-                                    checked={isAllVisibleSelected}
-                                    onChange={handleSelectAll}
-                                    title="Select/Deselect All Visible"
-                                />
+                                <input type="checkbox" className="styled-checkbox" checked={isAllVisibleSelected} onChange={handleSelectAll} title="Select/Deselect All Visible" />
                             </th>
                         )}
-
-                        {visibleColumns.name && (
-                            <th style={{ cursor: 'pointer' }} onClick={() => toggleSort('name')}>
-                                Name {hasSortActive && sortConfig.key === 'name' ? (sortConfig.direction === 'asc' ? ' ▲' : ' ▼') : ''}
-                            </th>
-                        )}
-                        {visibleColumns.hsn && (
-                            <th style={{ cursor: 'pointer' }} onClick={() => toggleSort('hsn')}>
-                                HSN {hasSortActive && sortConfig.key === 'hsn' ? (sortConfig.direction === 'asc' ? ' ▲' : ' ▼') : ''}
-                            </th>
-                        )}
-                        {visibleColumns.category && (
-                            <th style={{ cursor: 'pointer' }} onClick={() => toggleSort('category')}>
-                                Category {hasSortActive && sortConfig.key === 'category' ? (sortConfig.direction === 'asc' ? ' ▲' : ' ▼') : ''}
-                            </th>
-                        )}
-                        {visibleColumns.price && (
-                            <th style={{ cursor: 'pointer' }} onClick={() => toggleSort('price')}>
-                                Cost Price {hasSortActive && sortConfig.key === 'price' ? (sortConfig.direction === 'asc' ? ' ▲' : ' ▼') : ''}
-                            </th>
-                        )}
-                        {visibleColumns.costPrice && (
-                            <th style={{ cursor: 'pointer' }} onClick={() => toggleSort('costPrice')}>
-                                Price {hasSortActive && sortConfig.key === 'costPrice' ? (sortConfig.direction === 'asc' ? ' ▲' : ' ▼') : ''}
-                            </th>
-                        )}
-                        {visibleColumns.tax && (
-                            <th style={{ cursor: 'pointer' }} onClick={() => toggleSort('tax')}>
-                                Tax (%) {hasSortActive && sortConfig.key === 'tax' ? (sortConfig.direction === 'asc' ? ' ▲' : ' ▼') : ''}
-                            </th>
-                        )}
-                        {visibleColumns.stock && (
-                            <th style={{ cursor: 'pointer' }} onClick={() => toggleSort('stock')}>
-                                Stock {hasSortActive && sortConfig.key === 'stock' ? (sortConfig.direction === 'asc' ? ' ▲' : ' ▼') : ''}
-                            </th>
-                        )}
-                        {visibleColumns.status && (
-                            <th style={{ cursor: 'pointer' }} onClick={() => toggleSort('status')}>
-                                Status {hasSortActive && sortConfig.key === 'status' ? (sortConfig.direction === 'asc' ? ' ▲' : ' ▼') : ''}
-                            </th>
-                        )}
-                        {visibleColumns.generateTag && (
-                            <th>Generate Tag</th>
-                        )}
+                        {visibleColumns.name && (<th style={{ cursor: 'pointer' }} onClick={() => toggleSort('name')}>Name {hasSortActive && sortConfig.key === 'name' ? (sortConfig.direction === 'asc' ? ' ▲' : ' ▼') : ''}</th>)}
+                        {visibleColumns.hsn && (<th style={{ cursor: 'pointer' }} onClick={() => toggleSort('hsn')}>HSN {hasSortActive && sortConfig.key === 'hsn' ? (sortConfig.direction === 'asc' ? ' ▲' : ' ▼') : ''}</th>)}
+                        {visibleColumns.category && (<th style={{ cursor: 'pointer' }} onClick={() => toggleSort('category')}>Category {hasSortActive && sortConfig.key === 'category' ? (sortConfig.direction === 'asc' ? ' ▲' : ' ▼') : ''}</th>)}
+                        {visibleColumns.price && (<th style={{ cursor: 'pointer' }} onClick={() => toggleSort('price')}>Cost Price {hasSortActive && sortConfig.key === 'price' ? (sortConfig.direction === 'asc' ? ' ▲' : ' ▼') : ''}</th>)}
+                        {visibleColumns.costPrice && (<th style={{ cursor: 'pointer' }} onClick={() => toggleSort('costPrice')}>Price {hasSortActive && sortConfig.key === 'costPrice' ? (sortConfig.direction === 'asc' ? ' ▲' : ' ▼') : ''}</th>)}
+                        {visibleColumns.tax && (<th style={{ cursor: 'pointer' }} onClick={() => toggleSort('tax')}>Tax (%) {hasSortActive && sortConfig.key === 'tax' ? (sortConfig.direction === 'asc' ? ' ▲' : ' ▼') : ''}</th>)}
+                        {visibleColumns.stock && (<th style={{ cursor: 'pointer' }} onClick={() => toggleSort('stock')}>Stock {hasSortActive && sortConfig.key === 'stock' ? (sortConfig.direction === 'asc' ? ' ▲' : ' ▼') : ''}</th>)}
+                        {visibleColumns.status && (<th style={{ cursor: 'pointer' }} onClick={() => toggleSort('status')}>Status {hasSortActive && sortConfig.key === 'status' ? (sortConfig.direction === 'asc' ? ' ▲' : ' ▼') : ''}</th>)}
+                        {visibleColumns.generateTag && (<th>Generate Tag</th>)}
                         {visibleColumns.actions && <th>Actions</th>}
                     </tr>
                     </thead>
@@ -917,23 +918,8 @@ const ProductsPage = () => {
                         <tr><td colSpan={selectedColsCount + (isSelectionMode ? 1 : 0)} style={{ textAlign: 'center', padding: '20px' }}>Loading...</td></tr>
                     ) : products.length > 0 ? (
                         products.map(product => (
-                            <tr
-                                key={product.id}
-                                onClick={isSelectionMode ? () => handleSelectProduct(product.id) : undefined}
-                                style={{ cursor: isSelectionMode ? 'pointer' : 'default' }}
-                                className={isSelectionMode && selectedProducts.has(product.id) ? 'row-selected' : ''}
-                            >
-                                {isSelectionMode && (
-                                    <td>
-                                        <input
-                                            type="checkbox"
-                                            className="styled-checkbox"
-                                            checked={selectedProducts.has(product.id)}
-                                            onChange={() => handleSelectProduct(product.id)}
-                                        />
-                                    </td>
-                                )}
-
+                            <tr key={product.id} onClick={isSelectionMode ? () => handleSelectProduct(product.id) : undefined} style={{ cursor: isSelectionMode ? 'pointer' : 'default' }} className={isSelectionMode && selectedProducts.has(product.id) ? 'row-selected' : ''}>
+                                {isSelectionMode && (<td><input type="checkbox" className="styled-checkbox" checked={selectedProducts.has(product.id)} onChange={() => handleSelectProduct(product.id)} /></td>)}
                                 {visibleColumns.name && <td>{product.name}</td>}
                                 {visibleColumns.hsn && <td>{product.hsn}</td>}
                                 {visibleColumns.category && <td>{product.category}</td>}
@@ -942,75 +928,19 @@ const ProductsPage = () => {
                                 {visibleColumns.tax && <td>{product.tax}</td>}
                                 {visibleColumns.stock && <td>{product.stock}</td>}
                                 {visibleColumns.status && <td><span className={product.stock > 0 ? 'status-instock' : 'status-outofstock'}>{product.stock > 0 ? 'In Stock' : 'Out of Stock'}</span></td>}
-
                                 {visibleColumns.generateTag && (
                                     <td>
                                         <div className="action-icons">
-                                                <span
-                                                    className="action-icon"
-                                                    title="Generate QR Code"
-                                                    onClick={(e) => { e.stopPropagation(); handleGenerateTags([product], 'qr'); }}
-                                                    style={{
-                                                        cursor: "pointer",
-                                                        borderRadius: "6px",
-                                                        padding: "6px",
-                                                        marginRight: "8px",
-                                                        display: "inline-flex",
-                                                        backgroundColor: "var(--primary-color-light)",
-                                                        alignItems: "center",
-                                                        border: "var(--border-color) solid 1px",
-                                                        justifyContent: "center",
-                                                    }}
-                                                >
-                                                    <i className="fa-duotone fa-solid fa-qrcode"></i>
-                                                </span>
-                                            <span
-                                                className="action-icon"
-                                                title="Generate Barcode"
-                                                onClick={(e) => { e.stopPropagation(); handleGenerateTags([product], 'barcode'); }}
-                                                style={{
-                                                    cursor: "pointer",
-                                                    borderRadius: "6px",
-                                                    padding: "6px",
-                                                    marginRight: "8px",
-                                                    display: "inline-flex",
-                                                    backgroundColor: "var(--primary-color-light)",
-                                                    alignItems: "center",
-                                                    border: "var(--border-color) solid 1px",
-                                                    justifyContent: "center",
-                                                }}
-                                            >
-                                                    <i className="fa-duotone fa-solid fa-barcode"></i>
-                                                </span>
+                                            <span className="action-icon" title="Generate QR Code" onClick={(e) => { e.stopPropagation(); handleGenerateTags([product], 'qr'); }} style={{ cursor: "pointer", borderRadius: "6px", padding: "6px", marginRight: "8px", display: "inline-flex", backgroundColor: "var(--primary-color-light)", alignItems: "center", border: "var(--border-color) solid 1px", justifyContent: "center" }}><i className="fa-duotone fa-solid fa-qrcode"></i></span>
+                                            <span className="action-icon" title="Generate Barcode" onClick={(e) => { e.stopPropagation(); handleGenerateTags([product], 'barcode'); }} style={{ cursor: "pointer", borderRadius: "6px", padding: "6px", marginRight: "8px", display: "inline-flex", backgroundColor: "var(--primary-color-light)", alignItems: "center", border: "var(--border-color) solid 1px", justifyContent: "center" }}><i className="fa-duotone fa-solid fa-barcode"></i></span>
                                         </div>
                                     </td>
                                 )}
-
                                 {visibleColumns.actions && (
                                     <td>
                                         <div className="action-icons">
-                                                <span
-                                                    onClick={(e) => {
-                                                        e.stopPropagation();
-                                                        handleEditClick(product);
-                                                    }}
-                                                    className="action-icon edit"
-                                                    title="Edit Product"
-                                                >
-                                                    <i className="fa-duotone fa-solid fa-pen-to-square"></i>
-                                                </span>
-                                            <span
-                                                onClick={(e) => {
-                                                    e.stopPropagation();
-                                                    if (window.confirm("Are you sure you want to delete this product?")) {
-                                                        handleDeleteProduct(product.id).then(res => res.success && fetchProducts());
-                                                    }
-                                                }}
-                                                className="action-icon delete"
-                                                title="Delete Product"
-                                            >
-                                                    <i className="fa-duotone fa-solid fa-trash"></i>
-                                                </span>
+                                            <span onClick={(e) => { e.stopPropagation(); handleEditClick(product); }} className="action-icon edit" title="Edit Product"><i className="fa-duotone fa-solid fa-pen-to-square"></i></span>
+                                            <span onClick={(e) => { e.stopPropagation(); if (window.confirm("Are you sure you want to delete this product?")) { handleDeleteProduct(product.id).then(res => res.success && fetchProducts()); } }} className="action-icon delete" title="Delete Product"><i className="fa-duotone fa-solid fa-trash"></i></span>
                                         </div>
                                     </td>
                                 )}
@@ -1025,7 +955,73 @@ const ProductsPage = () => {
 
             <Pagination />
 
-            {/* --- MODALS (Unchanged) --- */}
+            {/* --- SCANNER MODAL --- */}
+            {/* UPDATED: onClose uses handleCloseScanner */}
+            <Modal title="Scan QR / Barcode" show={isScannerOpen} onClose={handleCloseScanner}>
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '10px' }}>
+                    <div id="reader" style={{ width: '100%', maxWidth: '500px', minHeight: '300px' }}></div>
+                    <p style={{ marginTop: '10px', color: '#666', fontSize: '0.9rem' }}>Align code within the box</p>
+                </div>
+            </Modal>
+
+            {/* --- PRODUCT DETAILS MODAL (READ-ONLY) --- */}
+            <Modal title="Product Details" show={isDetailsModalOpen} onClose={() => setIsDetailsModalOpen(false)}>
+                {scannedProduct && (
+                    <div style={{ padding: '10px' }}>
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' }}>
+                            <div className="detail-item">
+                                <label style={{ fontWeight: 'bold', display: 'block', fontSize: '0.85rem', color: '#666' }}>Name</label>
+                                <div style={{ fontSize: '1.1rem' }}>{scannedProduct.name}</div>
+                            </div>
+                            <div className="detail-item">
+                                <label style={{ fontWeight: 'bold', display: 'block', fontSize: '0.85rem', color: '#666' }}>Category</label>
+                                <div>{scannedProduct.category}</div>
+                            </div>
+                            <div className="detail-item">
+                                <label style={{ fontWeight: 'bold', display: 'block', fontSize: '0.85rem', color: '#666' }}>HSN</label>
+                                <div>{scannedProduct.hsn || '-'}</div>
+                            </div>
+                            <div className="detail-item">
+                                <label style={{ fontWeight: 'bold', display: 'block', fontSize: '0.85rem', color: '#666' }}>Tax</label>
+                                <div>{scannedProduct.tax}%</div>
+                            </div>
+                            <div className="detail-item">
+                                <label style={{ fontWeight: 'bold', display: 'block', fontSize: '0.85rem', color: '#666' }}>Cost Price</label>
+                                <div>₹{scannedProduct.costPrice}</div>
+                            </div>
+                            <div className="detail-item">
+                                <label style={{ fontWeight: 'bold', display: 'block', fontSize: '0.85rem', color: '#666' }}>Selling Price</label>
+                                <div style={{ fontWeight: 'bold', color: 'var(--primary-color)' }}>₹{scannedProduct.price}</div>
+                            </div>
+                        </div>
+
+                        <div style={{ marginTop: '20px', padding: '15px', background: scannedProduct.stock > 0 ? '#e6fffa' : '#fff5f5', borderRadius: '8px', border: scannedProduct.stock > 0 ? '1px solid #b2f5ea' : '1px solid #fed7d7' }}>
+                            <label style={{ fontWeight: 'bold', display: 'block', fontSize: '0.85rem', color: '#666' }}>Stock Status</label>
+                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                                <span style={{ fontSize: '1.2rem', fontWeight: 'bold' }}>{scannedProduct.stock} units</span>
+                                <span className={scannedProduct.stock > 0 ? 'status-instock' : 'status-outofstock'} style={{ padding: '4px 12px', fontSize: '0.9rem' }}>
+                                    {scannedProduct.stock > 0 ? 'In Stock' : 'Out of Stock'}
+                                 </span>
+                            </div>
+                        </div>
+
+                        <div className="form-actions" style={{ marginTop: '25px', display: 'flex', gap: '10px' }}>
+                            <button
+                                className="btn"
+                                onClick={() => {
+                                    setIsDetailsModalOpen(false);
+                                    handleEditClick(scannedProduct); // Open edit modal
+                                }}
+                            >
+                                <i className="fa-duotone fa-solid fa-pen-to-square"></i> Edit
+                            </button>
+                            <button className="btn btn-danger" onClick={() => setIsDetailsModalOpen(false)}>Close</button>
+                        </div>
+                    </div>
+                )}
+            </Modal>
+
+            {/* --- EXISTING MODALS (ADD, UPDATE, CSV) --- */}
             <Modal title="Add New Product" show={isModalOpen} onClose={() => setIsModalOpen(false)}>
                 <form onSubmit={handleAddProduct}>
                     <div className="form-group"><label>Product Name</label><input type="text" required value={name} onChange={e => setName(e.target.value)} /></div>
@@ -1037,11 +1033,7 @@ const ProductsPage = () => {
                     <div className="form-group">
                         <label>Tax Percent</label>
                         <select required value={tax} onChange={e => setTax(e.target.value)}>
-                            <option value="0">0</option>
-                            <option value="5">5</option>
-                            <option value="12">12</option>
-                            <option value="18">18</option>
-                            <option value="28">28</option>
+                            <option value="0">0</option><option value="5">5</option><option value="12">12</option><option value="18">18</option><option value="28">28</option>
                         </select>
                     </div>
                     <div className="form-actions"><button type="submit" className="btn">Add Product</button></div>
@@ -1059,14 +1051,8 @@ const ProductsPage = () => {
                     <div className="form-group">
                         <label>Tax Percent</label>
                         <select required value={tax} onChange={e => setTax(e.target.value)}>
-                            <option value="0">0</option>
-                            <option value="5">5</option>
-                            <option value="12">12</option>
-                            <option value="18">18</option>
-                            <option value="28">28</option>
-                            {!currentTaxIsStandard && tax != null && tax !== '' && (
-                                <option value={tax}>{tax}% (Current)</option>
-                            )}
+                            <option value="0">0</option><option value="5">5</option><option value="12">12</option><option value="18">18</option><option value="28">28</option>
+                            {!currentTaxIsStandard && tax != null && tax !== '' && (<option value={tax}>{tax}% (Current)</option>)}
                         </select>
                     </div>
                     <div className="form-actions"><button type="submit" className="btn">Update Product</button></div>
@@ -1098,22 +1084,7 @@ const ProductsPage = () => {
                         {csvFile && (<small>Selected: {csvFile.name} ({Math.round(csvFile.size / 1024)} KB)</small>)}
                         {uploadError && (<div className="error">{uploadError}</div>)}
 
-                        <button
-                            type="button"
-                            className="btn small-btn"
-                            onClick={handleDownloadTemplate}
-                            style={{
-                                marginTop: '15px',
-                                alignItems: 'start',
-                                gap: '5px',
-                                background: 'var(--primary-color-light)',
-                                color: 'var(--primary-color)',
-                                border: '1px solid var(--primary-color)',
-                                width: '30%',
-                                padding: '6px 12px',
-                                fontSize: '0.9em'
-                            }}
-                        >
+                        <button type="button" className="btn small-btn" onClick={handleDownloadTemplate} style={{ marginTop: '15px', alignItems: 'start', gap: '5px', background: 'var(--primary-color-light)', color: 'var(--primary-color)', border: '1px solid var(--primary-color)', width: '30%', padding: '6px 12px', fontSize: '0.9em' }}>
                             <FaDownload />Template
                         </button>
                         <div className="help-text" style={{ marginTop: "15px", fontWeight: "bold", fontSize: "0.9em" }}>

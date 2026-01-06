@@ -1,30 +1,23 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import { FaDownload } from 'react-icons/fa';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import axios from 'axios';
 import { useConfig } from "./ConfigProvider";
-import {MdDownload} from "react-icons/md";
 import './SalesPage.css';
 import { formatDate } from "../utils/formatDate";
 import { useAlert } from '../context/AlertContext';
-import {PaperPlaneTilt} from "@phosphor-icons/react";
-import { FaPaperPlane } from 'react-icons/fa';
 import PremiumFeature from '../components/PremiumFeature';
 import toast, {Toaster} from 'react-hot-toast';
+import Modal from '../components/Modal'; // Ensure Modal is imported
 
 import {
-    MdPerson,
-    MdEmail,
-    MdPhone,
-    MdShoppingCart,
-    MdClose,
-    MdCheckCircle,
-    MdCancel,
-    MdNotifications,
-    MdSend,
-    MdPayment
+    MdPerson, MdEmail, MdPhone, MdShoppingCart,
+    MdClose, MdCheckCircle, MdCancel, MdSend
 } from 'react-icons/md';
+import { FaBarcode } from 'react-icons/fa'; // Added FaBarcode
 import { useLocation } from 'react-router-dom';
 import {useSearchKey} from "../context/SearchKeyContext";
+
+// --- IMPORT SCANNER ---
+import { Html5Qrcode, Html5QrcodeSupportedFormats } from 'html5-qrcode';
 
 const useDebounce = (value, delay) => {
     const [debouncedValue, setDebouncedValue] = useState(value);
@@ -40,28 +33,37 @@ const SalesPage = () => {
     const [sales, setSales] = useState([]);
     const [searchTerm, setSearchTerm] = useState('');
     const [currentPage, setCurrentPage] = useState(1);
-
-    // --- CHANGE 1: Enable setPageSize ---
     const [pageSize, setPageSize] = useState(10);
-
     const [totalPages, setTotalPages] = useState(10);
     const [selectedOrder, setSelectedOrder] = useState(null);
     const [showModal, setShowModal] = useState(false);
     const [sortConfig, setSortConfig] = useState({ key: 'date', direction: 'desc' });
     const [hasSortActive, setHasSortActive] = useState(false);
     const [hoveredRow, setHoveredRow] = useState(null);
+
+    // Reminder & Payment States
     const [showReminderModal, setShowReminderModal] = useState(false);
     const [currentReminderInvoiceId, setCurrentReminderInvoiceId] = useState(null);
     const [reminderMessage, setReminderMessage] = useState("");
     const [sendViaEmail, setSendViaEmail] = useState(true);
     const [sendViaWhatsapp, setSendViaWhatsapp] = useState(false);
-
     const [showPaymentModal, setShowPaymentModal] = useState(false);
     const [currentPaymentOrder, setCurrentPaymentOrder] = useState(null);
     const [payingAmount, setPayingAmount] = useState("");
     const [isUpdatingPayment, setIsUpdatingPayment] = useState(false);
+
+    // --- SCANNER STATE ---
+    const [isScannerOpen, setIsScannerOpen] = useState(false);
+    const scannerRef = useRef(null);
+
     const debouncedSearchTerm = useDebounce(searchTerm, 500);
     const [hoveredReminderBtnId, setHoveredReminderBtnId] = useState(null);
+
+    const config = useConfig();
+    var apiUrl = "";
+    if (config) {
+        apiUrl = config.API_URL;
+    }
 
     const fetchSales = useCallback(async (termToSearch, page = 1) => {
         const finalSearchTerm = termToSearch !== undefined ? termToSearch : searchTerm;
@@ -70,7 +72,7 @@ const SalesPage = () => {
             const response = await axios.get(`${apiUrl}/api/shop/get/sales`, {
                 params: {
                     page: page,
-                    size: pageSize, // Used here
+                    size: pageSize,
                     search: finalSearchTerm || '',
                     sort: sortConfig.key,
                     dir: sortConfig.direction,
@@ -84,73 +86,155 @@ const SalesPage = () => {
 
         } catch (error) {
             console.error("Error fetching sales:", error);
-            toast.error("Something went wrong while fetching sales. Please try again.");
-
+            toast.error("Error fetching sales.");
             setSales([]);
-            setTotalPages(0);
-            setCurrentPage(1);
-
-            if (error.response && (error.response.status === 401 || error.response.status === 403)) {
-                toast.error("Your session may have expired. Please log in again.");
-            }
         }
-        // --- CHANGE 2: Added pageSize to dependency array ---
-    }, [apiUrl, pageSize, sortConfig.key, sortConfig.direction, setSales, setTotalPages, setCurrentPage, searchTerm]);
+    }, [apiUrl, pageSize, sortConfig, searchTerm]);
 
-
-    const config = useConfig();
-    var apiUrl = "";
-    if (config) {
-        apiUrl = config.API_URL;
-    }
-
-    // ... [Styles and other hooks remain unchanged] ...
-
+    // --- EXISTING HANDLERS ---
     const location = useLocation();
     const { searchKey, setSearchKey } = useSearchKey();
 
     useEffect(() => {
         const params = new URLSearchParams(location.search);
         const key = params.get('searchKey');
-        if (key) {
-            setSearchTerm(key);
-        }
+        if (key) setSearchTerm(key);
     }, [location.search]);
 
     useEffect(() => {
-        return () => {
-            setSearchKey('');
-        };
+        return () => setSearchKey('');
     }, [setSearchKey]);
 
     useEffect(() => {
         if (searchKey && searchKey !== searchTerm) {
-            console.log("Context search key detected:", searchKey);
             setSearchTerm(searchKey);
             fetchSales(searchKey, 1);
         }
     }, [searchKey, fetchSales]);
 
     useEffect(() => {
-        if (searchKey && searchKey === debouncedSearchTerm) {
-            return;
-        }
-        console.log("Fetching sales for:", debouncedSearchTerm || "(no search term)", "Page:", currentPage);
+        if (searchKey && searchKey === debouncedSearchTerm) return;
         fetchSales(debouncedSearchTerm, currentPage);
     }, [debouncedSearchTerm, currentPage, fetchSales, searchKey]);
 
 
+    // --- SCANNER LOGIC (Exact Copy from ProductsPage) ---
     useEffect(() => {
-        const params = new URLSearchParams(location.search);
-        const key = params.get('searchKey');
-        if (key && key !== searchKey && key !== searchTerm) {
-            console.log("URL search key detected:", key);
-            setSearchTerm(key);
-            fetchSales(key, 1);
+        let html5QrCode;
+
+        if (isScannerOpen) {
+            // Small delay to ensure Modal DOM is ready
+            const timer = setTimeout(() => {
+                html5QrCode = new Html5Qrcode("reader");
+                scannerRef.current = html5QrCode;
+
+                const config = {
+                    fps: 10,
+                    qrbox: { width: 350, height: 210 },
+                    aspectRatio: 1.0,
+                    formatsToSupport: [
+                        Html5QrcodeSupportedFormats.QR_CODE,
+                        Html5QrcodeSupportedFormats.CODE_128,
+                        Html5QrcodeSupportedFormats.EAN_13,
+                        Html5QrcodeSupportedFormats.UPC_A
+                    ]
+                };
+
+                html5QrCode.start(
+                    { facingMode: "environment" },
+                    config,
+                    (decodedText) => {
+                        // SUCCESS: Stop camera immediately, then handle data
+                        html5QrCode.stop().then(() => {
+                            html5QrCode.clear();
+                            setIsScannerOpen(false);
+                            handleScanSuccess(decodedText);
+                        }).catch(err => {
+                            console.error("Failed to stop after scan", err);
+                            setIsScannerOpen(false);
+                            handleScanSuccess(decodedText);
+                        });
+                    },
+                    (errorMessage) => { /* ignore scan errors */ }
+                ).catch(err => {
+                    console.error("Error starting camera", err);
+                    toast.error("Could not start camera.");
+                    setIsScannerOpen(false);
+                });
+            }, 100);
+
+            return () => clearTimeout(timer);
         }
-    }, [location.search, fetchSales, searchKey, searchTerm]);
 
+        return () => {
+            if (scannerRef.current) {
+                try {
+                    if (scannerRef.current.isScanning) {
+                        scannerRef.current.stop().catch(e => console.warn(e));
+                    }
+                    scannerRef.current.clear();
+                } catch (e) { /* ignore */ }
+                scannerRef.current = null;
+            }
+        };
+    }, [isScannerOpen]);
 
+    const handleCloseScanner = () => {
+        if (scannerRef.current) {
+            scannerRef.current.stop()
+                .then(() => {
+                    scannerRef.current.clear();
+                    setIsScannerOpen(false);
+                })
+                .catch((err) => {
+                    console.warn("Scanner stop error:", err);
+                    setIsScannerOpen(false);
+                });
+        } else {
+            setIsScannerOpen(false);
+        }
+    };
+
+    // --- LOGIC TO AUTO-OPEN DETAILS ON SUCCESS ---
+    const handleScanSuccess = async (decodedText) => {
+        setSearchTerm(decodedText); // Update search bar
+        toast.loading(`Processing ${decodedText}...`, { id: 'scanLoader' });
+
+        try {
+            // 1. Search for the specific order via API
+            const response = await axios.get(`${apiUrl}/api/shop/get/sales`, {
+                params: {
+                    page: 1,
+                    size: 10, // Fetch a few to ensure we find the match
+                    search: decodedText
+                },
+                withCredentials: true,
+            });
+
+            toast.dismiss('scanLoader');
+
+            const results = response.data.content || [];
+
+            // 2. Try to find an exact match for Invoice ID or just take the first result
+            // Assuming the barcode holds the Invoice ID
+            const exactMatch = results.find(sale => String(sale.id) === decodedText) || results[0];
+
+            if (exactMatch) {
+                toast.success("Order found!");
+                // 3. Trigger the existing row click logic to fetch details & open modal
+                handleRowClick(exactMatch.id);
+            } else {
+                toast.error(`Order "${decodedText}" not found.`);
+            }
+
+        } catch (error) {
+            toast.dismiss('scanLoader');
+            toast.error("Error searching for order.");
+            console.error(error);
+        }
+    };
+
+    // --- HELPERS ---
     const toggleSort = (key) => {
         setSortConfig(prev => ({
             key,
@@ -160,15 +244,10 @@ const SalesPage = () => {
         setCurrentPage(1);
     };
 
-    const indexOfLast = currentPage * pageSize;
-    const indexOfFirst = indexOfLast - pageSize;
-    const currentSales = sales;
-
-    // --- CHANGE 3: Handler for changing page size ---
     const handlePageSizeChange = (e) => {
         const newSize = parseInt(e.target.value, 10);
         setPageSize(newSize);
-        setCurrentPage(1); // Always reset to page 1 when changing size to avoid empty pages
+        setCurrentPage(1);
     };
 
     const handleOpenReminderModal = (saleId) => {
@@ -181,9 +260,8 @@ const SalesPage = () => {
 
     const handleConfirmSendReminder = async () => {
         if (!currentReminderInvoiceId) return;
-
         if (!sendViaEmail && !sendViaWhatsapp) {
-            showAlert("Please select at least one channel (Email or WhatsApp).", "warning");
+            showAlert("Please select at least one channel.", "warning");
             return;
         }
 
@@ -194,12 +272,7 @@ const SalesPage = () => {
                 sendViaWhatsapp: sendViaWhatsapp,
                 orderId: currentReminderInvoiceId
             };
-
-            await axios.post(
-                `${apiUrl}/api/shop/payment/send-reminder`,
-                payload,
-                { withCredentials: true }
-            );
+            await axios.post(`${apiUrl}/api/shop/payment/send-reminder`, payload, { withCredentials: true });
 
             setSales(currentSales =>
                 currentSales.map(sale =>
@@ -208,19 +281,16 @@ const SalesPage = () => {
                         : sale
                 )
             );
-
             toast.success('Reminder sent successfully!', 'success');
             setShowReminderModal(false);
             setReminderMessage("");
             setCurrentReminderInvoiceId(null);
-
         } catch (error) {
             console.error("Error sending reminder:", error);
-            showAlert("Failed to send the reminder. Please try again.");
+            showAlert("Failed to send the reminder.");
         }
     };
 
-    // ... [Payment Handlers and Invoice Handlers remain unchanged] ...
     const handleOpenPaymentModal = (sale) => {
         setCurrentPaymentOrder(sale);
         setPayingAmount("");
@@ -236,7 +306,7 @@ const SalesPage = () => {
             return;
         }
         if (amount > dueAmount + 0.01) {
-            showAlert(`Payment cannot be more than the due amount of ₹${dueAmount.toLocaleString()}.`, "warning");
+            showAlert(`Payment cannot be more than the due amount.`, "warning");
             return;
         }
         setIsUpdatingPayment(true);
@@ -258,7 +328,7 @@ const SalesPage = () => {
             setCurrentPaymentOrder(null);
         } catch (error) {
             console.error("Error updating payment:", error);
-            showAlert("Failed to update payment. Please try again.");
+            showAlert("Failed to update payment.");
         } finally {
             setIsUpdatingPayment(false);
         }
@@ -279,29 +349,33 @@ const SalesPage = () => {
             toast.success("Invoice downloaded!");
         } catch (error) {
             console.error("Error downloading invoice:", error);
-            showAlert("Failed to download the invoice. Please try again.");
+            showAlert("Failed to download invoice.");
         }
     };
 
     const handleSendInvoice = async (saleId) => {
-        if (!saleId) {
-            showAlert("Order Reference number is not available.", "error");
-            return;
-        }
         if (!window.confirm("Send the invoice to customer via email?")) return;
         try {
             const response = await fetch(`${apiUrl}/api/shop/send-invoice-email/${saleId}`, {
                 method: 'POST',
                 credentials: 'include',
             });
-            if (!response.ok) {
-                const errorData = await response.text();
-                throw new Error(errorData || `Failed to send invoice: ${response.statusText}`);
-            }
+            if (!response.ok) throw new Error(`Failed: ${response.statusText}`);
             toast.success("Invoice sent successfully!", "success");
         } catch (error) {
             console.error("Error sending invoice email:", error);
-            showAlert(`Could not send invoice: ${error.message}`, "error");
+            showAlert("Could not send invoice.", "error");
+        }
+    };
+
+    const handleRowClick = async (saleId) => {
+        try {
+            const response = await axios.get(`${apiUrl}/api/shop/get/order/${saleId}`, { withCredentials: true });
+            setSelectedOrder(response.data);
+            setShowModal(true);
+        } catch (error) {
+            console.error("Error fetching order details:", error);
+            showAlert("Failed to fetch order details.");
         }
     };
 
@@ -319,17 +393,7 @@ const SalesPage = () => {
         return [1, '...', currentPage - 1, currentPage, currentPage + 1, '...', totalPages];
     };
 
-    const handleRowClick = async (saleId) => {
-        try {
-            const response = await axios.get(`${apiUrl}/api/shop/get/order/${saleId}`, { withCredentials: true });
-            setSelectedOrder(response.data);
-            setShowModal(true);
-        } catch (error) {
-            console.error("Error fetching order details:", error);
-            showAlert("Failed to fetch order details.");
-        }
-    };
-
+    const currentSales = sales;
     const paginationItems = getPaginationItems(currentPage, totalPages);
 
     return (
@@ -346,18 +410,35 @@ const SalesPage = () => {
                 },
             }}   reverseOrder={false} />
             <h2>Sales</h2>
+
             <div className="page-header" style={{marginTop: "20px"}}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', border: '1px solid var(--border-color)', borderRadius: '20px', padding: '0.2rem 1rem' }}>
-                    <input
-                        type="text"
-                        placeholder="Search by Invoice ID or Customer..."
-                        className="search-bar"
-                        value={searchTerm}
-                        onChange={(e) => {
-                            setSearchTerm(e.target.value);
-                            setCurrentPage(1);
-                        }}
-                    />
+                {/* --- UPDATED SEARCH BAR WITH SCANNER ICON --- */}
+                <div style={{ position: 'relative', display: 'flex', alignItems: 'center', width: 'fit-content' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px',   borderRadius: '20px', padding: '0.2rem 1rem', background: 'white' }}>
+                        <input
+                            type="text"
+                            placeholder="Search by Invoice ID or Customer..."
+                            className="search-bar"
+                            value={searchTerm}
+                            style={{
+                                margin: 0,
+                                border: 'none',
+                                paddingRight: '30px',
+                                minWidth: '300px'
+                            }}
+                            onChange={(e) => {
+                                setSearchTerm(e.target.value);
+                                setCurrentPage(1);
+                            }}
+                        />
+                        <span
+                            onClick={() => setIsScannerOpen(true)}
+                            title="Scan Invoice Barcode/QR"
+
+                        >
+                            <i className="fa-duotone fa-barcode-read"></i>
+                        </span>
+                    </div>
                 </div>
             </div>
 
@@ -501,68 +582,45 @@ const SalesPage = () => {
                 </table>
             </div>
 
-            {/* --- CHANGE 4: REFACTORED PAGINATION CONTAINER --- */}
-            {/* --- UPDATED PAGINATION SECTION --- */}
-            {/* Show footer as long as there are items, not just when pages > 1 */}
+            {/* Pagination */}
             {sales.length > 0 && (
                 <div className="pagination-footer">
-
-                    {/* LEFT: Page Size Selector */}
                     <div className="page-size-container">
                         <span className="page-size-label">Rows per page:</span>
                         <div className="select-wrapper">
-                            <select
-                                value={pageSize}
-                                onChange={handlePageSizeChange}
-                                className="custom-page-select"
-                            >
+                            <select value={pageSize} onChange={handlePageSizeChange} className="custom-page-select">
                                 {[10, 20, 30, 40, 50, 60, 70, 80, 90, 100].map(size => (
                                     <option key={size} value={size}>{size}</option>
                                 ))}
                             </select>
                         </div>
                     </div>
-
-                    {/* CENTER: Pagination Controls (Only show buttons if more than 1 page) */}
                     <div className="pagination-controls">
                         {totalPages > 1 && (
                             <>
-                                <button onClick={() => setCurrentPage(p => Math.max(p - 1, 1))} disabled={currentPage === 1}>
-                                    &laquo; Prev
-                                </button>
-
-                                {paginationItems.map((item, index) => {
-                                    if (typeof item === 'string') {
-                                        return (
-                                            <span key={index} className="pagination-ellipsis">
-                                                {item}
-                                            </span>
-                                        );
-                                    }
-                                    return (
-                                        <button
-                                            key={index}
-                                            className={currentPage === item ? 'active' : ''}
-                                            onClick={() => setCurrentPage(item)}
-                                        >
-                                            {item}
-                                        </button>
-                                    );
-                                })}
-
-                                <button onClick={() => setCurrentPage(p => Math.min(p + 1, totalPages))} disabled={currentPage === totalPages}>
-                                    Next &raquo;
-                                </button>
+                                <button onClick={() => setCurrentPage(p => Math.max(p - 1, 1))} disabled={currentPage === 1}>&laquo; Prev</button>
+                                {paginationItems.map((item, index) => (
+                                    (typeof item === 'string')
+                                        ? <span key={index} className="pagination-ellipsis">{item}</span>
+                                        : <button key={index} className={currentPage === item ? 'active' : ''} onClick={() => setCurrentPage(item)}>{item}</button>
+                                ))}
+                                <button onClick={() => setCurrentPage(p => Math.min(p + 1, totalPages))} disabled={currentPage === totalPages}>Next &raquo;</button>
                             </>
                         )}
                     </div>
-
-                    {/* RIGHT: Empty div to balance grid */}
                     <div className="pagination-spacer"></div>
                 </div>
             )}
 
-            {/* ... [Modals remain unchanged] ... */}
+            {/* --- SCANNER MODAL --- */}
+            <Modal title="Scan Invoice Barcode" show={isScannerOpen} onClose={handleCloseScanner}>
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '10px' }}>
+                    <div id="reader" style={{ width: '100%', maxWidth: '500px', minHeight: '300px' }}></div>
+                    <p style={{ marginTop: '10px', color: '#666', fontSize: '0.9rem' }}>Align Invoice ID barcode within the box</p>
+                </div>
+            </Modal>
+
+            {/* --- ORDER DETAILS MODAL (Existing) --- */}
             {showModal && selectedOrder && (
                 <div
                     className="order-modal-overlay"
@@ -583,7 +641,6 @@ const SalesPage = () => {
                         {/* Box 1: Customer Details */}
                         <h3><MdPerson size={24} /> Customer Details</h3>
                         <div className="order-box" style={{ marginLeft: '40px', marginTop: '20px' }}>
-
                             <div className="detail-item" >
                                 <MdPerson size={20} color="var(--primary-color)" />
                                 <span><strong>Customer:</strong> {selectedOrder.customerName}</span>
@@ -602,9 +659,7 @@ const SalesPage = () => {
                                 ) : (
                                     <MdCancel size={20} color="red" />
                                 )}
-                                <span>
-                              <strong>Status:</strong> {selectedOrder.paid ? "Paid" : "Partially Paid"}
-                                </span>
+                                <span><strong>Status:</strong> {selectedOrder.paid ? "Paid" : "Partially Paid"}</span>
                             </div>
                         </div>
 
@@ -635,7 +690,6 @@ const SalesPage = () => {
                             </table>
                         </div>
 
-
                         {/* Box 3: Totals & GST */}
                         <div className="order-box">
                             {selectedOrder.subTotal !== undefined && (
@@ -653,12 +707,9 @@ const SalesPage = () => {
                             {selectedOrder.discount !== undefined && (
                                 <div className="summary-row">
                                     <span>Discount</span>
-                                    <span style={{ color: 'red' }}>
-              -₹{selectedOrder.discount.toLocaleString()}
-            </span>
+                                    <span style={{ color: 'red' }}>-₹{selectedOrder.discount.toLocaleString()}</span>
                                 </div>
                             )}
-
                             <div className="summary-divider" />
                             {selectedOrder.gstRate !== undefined && (
                                 <div className="summary-row" style={{ fontWeight: 'bold' }}>
@@ -684,82 +735,31 @@ const SalesPage = () => {
                                 <MdClose size={28} />
                             </button>
                         </div>
-
                         <div style={{ padding: '20px' }}>
                             <div className="form-group" style={{ marginBottom: '15px' }}>
-                                <label style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold' }}>
-                                    Message (Optional):
-                                </label>
-                                <textarea
-                                    value={reminderMessage}
-                                    onChange={(e) => setReminderMessage(e.target.value)}
-                                    placeholder="Add a custom message for the reminder..."
-                                    rows="4"
-                                    style={{
-                                        width: '100%',
-                                        padding: '10px',
-                                        borderRadius: '8px',
-                                        border: '1px solid var(--border-color)',
-                                        background: 'var(--input-bg)',
-                                        color: 'var(--text-color)',
-                                        fontSize: '1rem',
-                                        resize: 'vertical'
-                                    }}
-                                />
+                                <label style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold' }}>Message (Optional):</label>
+                                <textarea value={reminderMessage} onChange={(e) => setReminderMessage(e.target.value)} placeholder="Add a custom message for the reminder..." rows="4" style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid var(--border-color)', background: 'var(--input-bg)', color: 'var(--text-color)', fontSize: '1rem', resize: 'vertical' }} />
                             </div>
-
                             <div className="form-group" style={{ marginBottom: '20px' }}>
-                                <label style={{ display: 'block', marginBottom: '10px', fontWeight: 'bold' }}>
-                                    Send via:
-                                </label>
+                                <label style={{ display: 'block', marginBottom: '10px', fontWeight: 'bold' }}>Send via:</label>
                                 <div style={{ display: 'flex', gap: '20px' }}>
                                     <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
-                                        <input
-                                            type="checkbox"
-                                            checked={true}
-                                            onChange={(e) => setSendViaEmail(e.target.checked)}
-                                            style={{ transform: 'scale(1.2)', accentColor: 'var(--primary-color)' }}
-                                        />
-                                        Email
+                                        <input type="checkbox" checked={true} onChange={(e) => setSendViaEmail(e.target.checked)} style={{ transform: 'scale(1.2)', accentColor: 'var(--primary-color)' }} /> Email
                                     </label>
                                     <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
-                                        <input
-                                            type="checkbox"
-                                            checked={sendViaWhatsapp}
-                                            onChange={(e) => setSendViaWhatsapp(e.target.checked)}
-                                            style={{ transform: 'scale(1.2)', accentColor: 'var(--primary-color)' }}
-                                        />
-                                        WhatsApp
+                                        <input type="checkbox" checked={sendViaWhatsapp} onChange={(e) => setSendViaWhatsapp(e.target.checked)} style={{ transform: 'scale(1.2)', accentColor: 'var(--primary-color)' }} /> WhatsApp
                                     </label>
                                 </div>
                             </div>
-
                             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
-                                <button
-                                    className="btn"
-                                    onClick={() => setShowReminderModal(false)}
-                                    style={{ background: 'var(--glass-card-bg)', color: 'var(--text-color)', border: '1px solid var(--border-color)' }}
-                                >
-                                    Cancel
-                                </button>
-                                <button
-                                    className="btn"
-                                    onClick={handleConfirmSendReminder}
-                                    style={{
-                                        background: 'var(--primary-color)',
-                                        color: 'white',
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        gap: '8px'
-                                    }}
-                                >
-                                    Send Reminder <MdSend size={18} />
-                                </button>
+                                <button className="btn" onClick={() => setShowReminderModal(false)} style={{ background: 'var(--glass-card-bg)', color: 'var(--text-color)', border: '1px solid var(--border-color)' }}>Cancel</button>
+                                <button className="btn" onClick={handleConfirmSendReminder} style={{ background: 'var(--primary-color)', color: 'white', display: 'flex', alignItems: 'center', gap: '8px' }}>Send Reminder <MdSend size={18} /></button>
                             </div>
                         </div>
                     </div>
                 </div>
             )}
+
             {showPaymentModal && currentPaymentOrder && (
                 <div className="order-modal-overlay" onClick={() => setShowPaymentModal(false)}>
                     <div className="order-modal-content" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '450px' }}>
@@ -769,7 +769,6 @@ const SalesPage = () => {
                                 <MdClose size={28} />
                             </button>
                         </div>
-
                         <div style={{ padding: '20px' }}>
                             <div className="payment-summary-box" style={{ marginBottom: '20px', padding: '15px', background: 'var(--glass-bg)', borderRadius: '8px', border: '1px solid var(--border-color)'}}>
                                 <div style={{display: 'flex', justifyContent: 'space-between', fontSize: '1.1em', marginBottom: '10px'}}>
@@ -786,58 +785,18 @@ const SalesPage = () => {
                                     <strong style={{color: '#d32f2f'}}>₹{(currentPaymentOrder.total - currentPaymentOrder.paid).toLocaleString()}</strong>
                                 </div>
                             </div>
-
                             <div className="form-group" style={{ marginBottom: '20px' }}>
-                                <label style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold' }}>
-                                    Enter Paying Amount:
-                                </label>
-                                <input
-                                    type="number"
-                                    value={payingAmount}
-                                    onChange={(e) => setPayingAmount(e.target.value)}
-                                    placeholder="0.00"
-                                    style={{
-                                        width: '100%',
-                                        padding: '12px',
-                                        borderRadius: '8px',
-                                        border: '1px solid var(--border-color)',
-                                        background: 'var(--input-bg)',
-                                        color: 'var(--text-color)',
-                                        fontSize: '1.2rem',
-                                        textAlign: 'right'
-                                    }}
-                                />
+                                <label style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold' }}>Enter Paying Amount:</label>
+                                <input type="number" value={payingAmount} onChange={(e) => setPayingAmount(e.target.value)} placeholder="0.00" style={{ width: '100%', padding: '12px', borderRadius: '8px', border: '1px solid var(--border-color)', background: 'var(--input-bg)', color: 'var(--text-color)', fontSize: '1.2rem', textAlign: 'right' }} />
                             </div>
-
                             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
-                                <button
-                                    className="btn"
-                                    onClick={() => setShowPaymentModal(false)}
-                                    style={{ background: 'var(--glass-card-bg)', color: 'var(--text-color)', border: '1px solid var(--border-color)' }}
-                                    disabled={isUpdatingPayment}
-                                >
-                                    Cancel
-                                </button>
-                                <button
-                                    className="btn"
-                                    onClick={handleConfirmUpdatePayment}
-                                    disabled={isUpdatingPayment}
-                                    style={{
-                                        background: 'var(--primary-color)',
-                                        color: 'white',
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        gap: '8px'
-                                    }}
-                                >
-                                    {isUpdatingPayment ? 'Processing...' : 'Confirm Payment'}
-                                </button>
+                                <button className="btn" onClick={() => setShowPaymentModal(false)} style={{ background: 'var(--glass-card-bg)', color: 'var(--text-color)', border: '1px solid var(--border-color)' }} disabled={isUpdatingPayment}>Cancel</button>
+                                <button className="btn" onClick={handleConfirmUpdatePayment} disabled={isUpdatingPayment} style={{ background: 'var(--primary-color)', color: 'white', display: 'flex', alignItems: 'center', gap: '8px' }}>{isUpdatingPayment ? 'Processing...' : 'Confirm Payment'}</button>
                             </div>
                         </div>
                     </div>
                 </div>
             )}
-
         </div>
     );
 };

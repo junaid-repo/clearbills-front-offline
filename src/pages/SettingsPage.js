@@ -103,6 +103,7 @@ const SettingsPage = () => {
         showTotalDiscountPercentage: false,
         showIndividualDiscountPercentage: false,
         showShopPanOnInvoice: true,
+        showInvoiceBarcode: true,
         showSupportInfoOnInvoice: true,
         showRateColumn: true,
         showHsnColumn: true,
@@ -559,6 +560,7 @@ const SettingsPage = () => {
                     <div className="tab-pane">
                         <h5 className="setting-section-header">Header</h5>
                         <div className="setting-item"><div className="setting-toggle"><ToggleSwitch checked={invoiceSettings.showShopPanOnInvoice} onChange={(e) => setInvoiceSettings({ ...invoiceSettings, showShopPanOnInvoice: e.target.checked })} /><label>Show Shop Pan</label></div></div>
+                        <div className="setting-item"><div className="setting-toggle"><ToggleSwitch checked={invoiceSettings.showInvoiceBarcode} onChange={(e) => setInvoiceSettings({ ...invoiceSettings, showInvoiceBarcode: e.target.checked })} /><label>Show Invoice Barcode</label></div></div>
                         <h5 className="setting-section-header">Customer Details</h5>
                         <div className="setting-item"><div className="setting-toggle"><ToggleSwitch checked={invoiceSettings.combineAddresses} onChange={(e) => setInvoiceSettings({ ...invoiceSettings, combineAddresses: e.target.checked })} /><label>Combine Ship To and Bill To as 'Bill To'</label></div></div>
                         <div className="setting-item"><div className="setting-toggle"><ToggleSwitch checked={invoiceSettings.showCustomerGstin} onChange={(e) => setInvoiceSettings({ ...invoiceSettings, showCustomerGstin: e.target.checked })} /><label>Show Customer GSTIN on invoice</label></div></div>
