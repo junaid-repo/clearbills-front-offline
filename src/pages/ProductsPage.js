@@ -918,8 +918,30 @@ const ProductsPage = () => {
                         <tr><td colSpan={selectedColsCount + (isSelectionMode ? 1 : 0)} style={{ textAlign: 'center', padding: '20px' }}>Loading...</td></tr>
                     ) : products.length > 0 ? (
                         products.map(product => (
-                            <tr key={product.id} onClick={isSelectionMode ? () => handleSelectProduct(product.id) : undefined} style={{ cursor: isSelectionMode ? 'pointer' : 'default' }} className={isSelectionMode && selectedProducts.has(product.id) ? 'row-selected' : ''}>
-                                {isSelectionMode && (<td><input type="checkbox" className="styled-checkbox" checked={selectedProducts.has(product.id)} onChange={() => handleSelectProduct(product.id)} /></td>)}
+                            <tr
+                                key={product.id}
+                                onClick={() => {
+                                    if (isSelectionMode) {
+                                        handleSelectProduct(product.id);
+                                    } else {
+                                        setScannedProduct(product);
+                                        setIsDetailsModalOpen(true);
+                                    }
+                                }}
+                                style={{ cursor: 'pointer' }}
+                                className={isSelectionMode && selectedProducts.has(product.id) ? 'row-selected' : ''}
+                            >
+                                {isSelectionMode && (
+                                    <td>
+                                        <input
+                                            type="checkbox"
+                                            className="styled-checkbox"
+                                            checked={selectedProducts.has(product.id)}
+                                            onChange={() => handleSelectProduct(product.id)}
+                                            onClick={(e) => e.stopPropagation()}
+                                        />
+                                    </td>
+                                )}
                                 {visibleColumns.name && <td>{product.name}</td>}
                                 {visibleColumns.hsn && <td>{product.hsn}</td>}
                                 {visibleColumns.category && <td>{product.category}</td>}
