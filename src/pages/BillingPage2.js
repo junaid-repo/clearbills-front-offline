@@ -62,7 +62,7 @@ const BillingPage = ({ setSelectedPage }) => {
     // --- State for New Customer Modal ---
     const [name, setName] = useState("");
     const [email, setEmail] = useState("");
-    const [phone, setPhone] = useState("");
+    const [phone, setPhone] = useState(null);
     const [city, setCity] = useState("");
     const [gstNumber, setGstNumber] = useState("");
     const [customerState, setCustomerState] = useState("");

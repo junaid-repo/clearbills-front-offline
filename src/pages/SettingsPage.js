@@ -5,7 +5,7 @@ import {
     PaintBrush, Timer, ShoppingCart, Receipt, User, Invoice,
     Database, CloudArrowUp, CloudArrowDown, HardDrives,
     WarningCircle, CheckCircle, ClockCounterClockwise, Trash, LinkBreak, CalendarCheck, ArrowsClockwise,
-    Warning // Added Warning icon
+    Warning, Code // Added Warning icon
 } from "@phosphor-icons/react";
 import toast, { Toaster } from 'react-hot-toast';
 import './SettingsPage.css';
@@ -130,6 +130,23 @@ const SettingsPage = () => {
     const [backupLoading, setBackupLoading] = useState(false);
     const [driveBackups, setDriveBackups] = useState([]);
     const restoreFileRef = useRef(null);
+
+    // 2. ADD STATE FOR DEV MODE (Place this near other state definitions)
+    const [devMode, setDevMode] = useState(() => {
+        return localStorage.getItem('devMode') === 'true';
+    });
+
+    // 3. ADD HANDLER (Place this near other handlers)
+    const handleDevModeChange = (e) => {
+        const isEnabled = e.target.checked;
+        setDevMode(isEnabled);
+        localStorage.setItem('devMode', isEnabled);
+        if (isEnabled) {
+            toast.success("Dev Mode Enabled: Native browser right-click active.");
+        } else {
+            toast.success("Dev Mode Disabled: Custom context menu active.");
+        }
+    };
 
     // --- BACKUP HANDLERS ---
     const handleLocalBackup = async () => {
@@ -463,7 +480,7 @@ const SettingsPage = () => {
             style: { background: 'lightgreen', color: 'var(--text-color)', borderRadius: '25px', padding: '12px', width: '180%', minWidth: '250px', fontSize: '16px' },
         }} reverseOrder={false} />
 
-        <div className="glass-card" style={{ maxWidth: '1100px', marginTop: '50px' }}>
+        <div className="glass-card" style={{ maxWidth: '1300px', marginTop: '50px' }}>
             <h1 style={{ textAlign: 'left', marginBottom: '55px' }}>Settings</h1>
             <span className="info-text" style={{ marginLeft: "-700px" }}>* Please logout and relogin for the settings to take effect</span>
 
@@ -485,6 +502,9 @@ const SettingsPage = () => {
                 </button>
                 <button className={`tab-btn ${activeTab === 'schedulers' ? 'active' : ''}`} onClick={() => setActiveTab('schedulers')}>
                     <i className="fa-duotone fa-solid fa-stopwatch"></i> Schedulers
+                </button>
+                <button className={`tab-btn ${activeTab === 'developer' ? 'active' : ''}`} onClick={() => setActiveTab('developer')}>
+                    <Code size={18} weight="bold" style={{marginRight:'8px'}}/> Developer
                 </button>
             </div>
 
@@ -597,6 +617,30 @@ const SettingsPage = () => {
                             )}
                         </div>
                         {isSchedulersDirty && <div className="save-button-container"><button className="btn" onClick={handleSaveSchedulers}>Save Schedulers</button></div>}
+                    </div>
+                )}
+
+                {activeTab === 'developer' && (
+                    <div className="tab-pane">
+                        <h3>Developer Settings</h3>
+                        <p style={{marginBottom: '20px', color: 'var(--text-color-secondary)'}}>
+                            Advanced configurations for debugging and development purposes.
+                        </p>
+
+                        <div className="setting-item">
+                            <div className="setting-toggle">
+                                <ToggleSwitch
+                                    checked={devMode}
+                                    onChange={handleDevModeChange}
+                                />
+                                <div style={{display:'flex', flexDirection:'column'}}>
+                                    <label style={{fontWeight:'600'}}>Enable Developer Mode</label>
+                                    <span style={{fontSize:'12px', color:'var(--text-color-secondary)'}}>
+                                        Enables the native browser context menu (Right-Click) to allow 'Inspect Element'.
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 )}
 

@@ -135,7 +135,10 @@ const ProductsPage = () => {
 
     // --- API & DATA HANDLING ---
     const config = useConfig();
-    const apiUrl = config ? config.API_URL : "";
+    var apiUrl = "";
+    if (config) {
+        apiUrl = config.API_URL;
+    }
 
     const fetchProducts = useCallback(async () => {
         if (!apiUrl) return;
@@ -146,6 +149,9 @@ const ProductsPage = () => {
         setIsLoading(true);
         try {
             const url = new URL(`${apiUrl}/api/shop/get/withCache/productsList`);
+
+            console.log(url);
+
             url.searchParams.append('page', currentPage);
             url.searchParams.append('limit', itemsPerPage);
             url.searchParams.append('sort', sortKey);
@@ -155,6 +161,7 @@ const ProductsPage = () => {
             }
 
             const response = await fetch(url, { method: "GET", credentials: 'include' });
+            console.log(response);
             if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
 
             const result = await response.json();
@@ -289,6 +296,7 @@ const ProductsPage = () => {
         toast.loading(`Scanning ${decodedText}...`, { id: 'scanLoader' });
         try {
             const url = new URL(`${apiUrl}/api/shop/get/withCache/productsList`);
+            console.log(url);
             url.searchParams.append('page', 1);
             url.searchParams.append('limit', 1);
             url.searchParams.append('search', decodedText);

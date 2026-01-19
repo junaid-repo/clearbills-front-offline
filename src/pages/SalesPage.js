@@ -79,7 +79,7 @@ const SalesPage = () => {
                 },
                 withCredentials: true,
             });
-
+            console.log(response);
             setSales(Array.isArray(response.data.content) ? response.data.content : []);
             setTotalPages(response.data.totalPages || 0);
             setCurrentPage(page);
@@ -414,17 +414,15 @@ const SalesPage = () => {
             <div className="page-header" style={{marginTop: "20px"}}>
                 {/* --- UPDATED SEARCH BAR WITH SCANNER ICON --- */}
                 <div style={{ position: 'relative', display: 'flex', alignItems: 'center', width: 'fit-content' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px',   borderRadius: '20px', padding: '0.2rem 1rem', background: 'white' }}>
-                        <input
+                         <input
                             type="text"
                             placeholder="Search by Invoice ID or Customer..."
                             className="search-bar"
                             value={searchTerm}
                             style={{
-                                margin: 0,
-                                border: 'none',
-                                paddingRight: '30px',
-                                minWidth: '300px'
+                                marginBottom: "0px",
+                                paddingRight: "40px", // Make space for the icon
+                                width: "250px"
                             }}
                             onChange={(e) => {
                                 setSearchTerm(e.target.value);
@@ -434,12 +432,19 @@ const SalesPage = () => {
                         <span
                             onClick={() => setIsScannerOpen(true)}
                             title="Scan Invoice Barcode/QR"
-
+                            style={{
+                                position: 'absolute',
+                                right: '10px',
+                                top: '50%',
+                                transform: 'translateY(-50%)',
+                                cursor: 'pointer',
+                                display: 'flex',
+                                alignItems: 'center'
+                            }}
                         >
                             <i className="fa-duotone fa-barcode-read"></i>
                         </span>
-                    </div>
-                </div>
+                 </div>
             </div>
 
             <div className="glass-card" >
@@ -639,8 +644,101 @@ const SalesPage = () => {
                         </div>
 
                         {/* Box 1: Customer Details */}
-                        <h3><MdPerson size={24} /> Customer Details</h3>
-                        <div className="order-box" style={{ marginLeft: '40px', marginTop: '20px' }}>
+
+
+                        {/* Box 1: Customer Details Header with Parallel Buttons */}
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '20px', marginBottom: '15px' }}>
+                            <h3 style={{ margin: 0, display: 'flex', alignItems: 'center' }}>
+                                <MdPerson size={24} style={{marginRight:'5px'}} /> Customer Details
+                            </h3>
+
+                            {/* Action Buttons Group */}
+                            <div style={{ display: 'flex', gap: '10px' }}>
+
+                                {/* Send Invoice */}
+                                <PremiumFeature>
+                                    <button
+                                        className="action-icons"
+                                        title="Send Invoice via mail"
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            handleSendInvoice(selectedOrder.invoiceId);
+                                        }}
+                                        style={{
+                                            cursor: "pointer",
+                                            borderRadius: "26px",
+                                            padding: "6px 12px", // Increased padding for text
+                                            display: "inline-flex",
+                                            backgroundColor: "var(--primary-color-light)",
+                                            alignItems: "center",
+                                            border: "var(--text-color) solid 1px",
+                                            justifyContent: "center",
+                                            gap: "6px" // Space between icon and text
+                                        }}
+                                    >
+                                        <i className="fa-duotone fa-solid fa-paper-plane" style={{ fontSize: "16px", color: "var(--text-color)" }}></i>
+                                        <span style={{ fontSize: "14px", fontWeight: "500", color: "var(--text-color)" }}>Send</span>
+                                    </button>
+                                </PremiumFeature>
+
+                                {/* Download Invoice */}
+                                <button
+                                    className="action-icons"
+                                    title="Download Invoice"
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        handleDownloadInvoice(selectedOrder.invoiceId);
+                                    }}
+                                    style={{
+                                        cursor: "pointer",
+                                        borderRadius: "26px",
+                                        padding: "6px 12px",
+                                        display: "inline-flex",
+                                        backgroundColor: "var(--primary-color-light)",
+                                        alignItems: "center",
+                                        border: "var(--text-color) solid 1px",
+                                        justifyContent: "center",
+                                        gap: "6px"
+                                    }}
+                                >
+                                    <i className="fa-duotone fa-solid fa-download" style={{ fontSize: "16px", color: "var(--text-color)" }}></i>
+                                    <span style={{ fontSize: "14px", fontWeight: "500", color: "var(--text-color)" }}>Invoice</span>
+                                </button>
+
+                                {/* Remind Button (Conditional) */}
+                                {(selectedOrder.totalAmount !== selectedOrder.paid) && (
+                                    <PremiumFeature>
+                                        <button
+                                            className="reminder-btn"
+                                            title="Send Payment Reminder"
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                handleOpenReminderModal(selectedOrder.invoiceId);
+                                            }}
+                                            style={{
+                                                cursor: "pointer",
+                                                borderRadius: "26px",
+                                                padding: "6px 12px",
+                                                display: "inline-flex",
+                                                alignItems: "center",
+                                                justifyContent: "center",
+                                                gap: "6px",
+                                                background: "var(--small-bg-cyan)",
+                                                border: "1px solid var(--text-color)",
+                                            }}
+                                        >
+                                            <i className="fa-duotone fa-solid fa-bell-plus" style={{ fontSize: "16px" }}></i>
+                                            <span style={{ fontSize: "14px", fontWeight: "500", color: "var(--text-color)" }}>
+                                                Remind {selectedOrder.reminderCount > 0 ? `(${selectedOrder.reminderCount})` : ''}
+                                            </span>
+                                        </button>
+                                    </PremiumFeature>
+                                )}
+                            </div>
+                        </div>
+
+                        {/* Customer Data Box */}
+                        <div className="order-box" style={{ marginLeft: '40px' }}>
                             <div className="detail-item" >
                                 <MdPerson size={20} color="var(--primary-color)" />
                                 <span><strong>Customer:</strong> {selectedOrder.customerName}</span>
